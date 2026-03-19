@@ -1,0 +1,3265 @@
+[
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Articles.ArticlesController",
+    "Method": "GetAll",
+    "RelativePath": "api/Articles",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Articles.ArticlesController",
+    "Method": "Create",
+    "RelativePath": "api/Articles",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Articles.CreateArticleRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Articles.ArticlesController",
+    "Method": "GetById",
+    "RelativePath": "api/Articles/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Articles.ArticlesController",
+    "Method": "Update",
+    "RelativePath": "api/Articles/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Articles.UpdateArticleRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Articles.ArticlesController",
+    "Method": "Delete",
+    "RelativePath": "api/Articles/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Articles.ArticlesController",
+    "Method": "GetStockActuel",
+    "RelativePath": "api/Articles/{id}/stock",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Articles.ArticlesController",
+    "Method": "GetArticlesEnAlerte",
+    "RelativePath": "api/Articles/alertes",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Articles.ArticlesController",
+    "Method": "GetByCategorie",
+    "RelativePath": "api/Articles/categorie/{idCategorie}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "idCategorie",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Articles.ArticlesController",
+    "Method": "GetByCodeBarre",
+    "RelativePath": "api/Articles/codebarre/{codeBarre}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "codeBarre",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Articles.ArticlesController",
+    "Method": "GetPosArticles",
+    "RelativePath": "api/Articles/pos",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Articles.ArticlesController",
+    "Method": "GetPromoArticles",
+    "RelativePath": "api/Articles/promo",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Articles.ArticlesController",
+    "Method": "GetArticlesEnRupture",
+    "RelativePath": "api/Articles/rupture",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Articles.ArticlesController",
+    "Method": "GetStatistiques",
+    "RelativePath": "api/Articles/statistiques",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Articles.ArticlesController",
+    "Method": "GetStockArticles",
+    "RelativePath": "api/Articles/stock",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "page",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "pageSize",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Articles.ArticlesController",
+    "Method": "GetStockAlerts",
+    "RelativePath": "api/Articles/stock/alerts",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "page",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "pageSize",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Articles.ArticlesController",
+    "Method": "GetStockByCategory",
+    "RelativePath": "api/Articles/stock/by-category/{categorie}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "categorie",
+        "Type": "System.String",
+        "IsRequired": true
+      },
+      {
+        "Name": "page",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "pageSize",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Articles.ArticlesController",
+    "Method": "GetStockByStatus",
+    "RelativePath": "api/Articles/stock/by-status/{status}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "status",
+        "Type": "System.String",
+        "IsRequired": true
+      },
+      {
+        "Name": "page",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "pageSize",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Articles.ArticlesController",
+    "Method": "SearchStock",
+    "RelativePath": "api/Articles/stock/search",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "term",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "page",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "pageSize",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Articles.ArticlesController",
+    "Method": "GetStockStatistics",
+    "RelativePath": "api/Articles/stock/statistics",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Articles.ArticlesController",
+    "Method": "GetStockArticlesFromView",
+    "RelativePath": "api/Articles/stock/view",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "page",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "pageSize",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "statutStock",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "designationCategorie",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "searchTerm",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "stockMin",
+        "Type": "System.Nullable\u00601[[System.Decimal, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "stockMax",
+        "Type": "System.Nullable\u00601[[System.Decimal, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "alertesOnly",
+        "Type": "System.Nullable\u00601[[System.Boolean, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "orderBy",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "orderDirection",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Authentication.AuthController",
+    "Method": "Health",
+    "RelativePath": "api/Auth/health",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Authentication.AuthController",
+    "Method": "Login",
+    "RelativePath": "api/Auth/login",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Authentication.LoginRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Authentication.AuthController",
+    "Method": "Logout",
+    "RelativePath": "api/Auth/logout",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Authentication.AuthController",
+    "Method": "GetCurrentUser",
+    "RelativePath": "api/Auth/me",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.AutresMagasin.AutresMagasinController",
+    "Method": "GetAll",
+    "RelativePath": "api/AutresMagasin",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.AutresMagasin.AutresMagasinController",
+    "Method": "Create",
+    "RelativePath": "api/AutresMagasin",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.AutresMagasin.CreateAutresMagasinRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.AutresMagasin.AutresMagasinController",
+    "Method": "GetById",
+    "RelativePath": "api/AutresMagasin/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.AutresMagasin.AutresMagasinController",
+    "Method": "Update",
+    "RelativePath": "api/AutresMagasin/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.AutresMagasin.UpdateAutresMagasinRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.AutresMagasin.AutresMagasinController",
+    "Method": "Delete",
+    "RelativePath": "api/AutresMagasin/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Categorie.CategorieController",
+    "Method": "GetAll",
+    "RelativePath": "api/Categorie",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Categorie.CategorieController",
+    "Method": "Create",
+    "RelativePath": "api/Categorie",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Categorie.CreateCathegorieRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Categorie.CategorieController",
+    "Method": "GetById",
+    "RelativePath": "api/Categorie/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Categorie.CategorieController",
+    "Method": "Update",
+    "RelativePath": "api/Categorie/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Categorie.UpdateCathegorieRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Categorie.CategorieController",
+    "Method": "Delete",
+    "RelativePath": "api/Categorie/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Categorie.CategorieController",
+    "Method": "GetEmporte",
+    "RelativePath": "api/Categorie/emporte",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Categorie.CategorieController",
+    "Method": "GetRestaurant",
+    "RelativePath": "api/Categorie/restaurant",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.CategorieComposants.CategorieComposantsController",
+    "Method": "GetAll",
+    "RelativePath": "api/CategorieComposants",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.CategorieComposants.CategorieComposantsController",
+    "Method": "Create",
+    "RelativePath": "api/CategorieComposants",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.CategorieComposants.CreateCategorieComposantRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.CategorieComposants.CategorieComposantsController",
+    "Method": "GetById",
+    "RelativePath": "api/CategorieComposants/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.CategorieComposants.CategorieComposantsController",
+    "Method": "Update",
+    "RelativePath": "api/CategorieComposants/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.CategorieComposants.UpdateCategorieComposantRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.CategorieComposants.CategorieComposantsController",
+    "Method": "Delete",
+    "RelativePath": "api/CategorieComposants/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Clients.ClientsController",
+    "Method": "GetAll",
+    "RelativePath": "api/Clients",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Clients.ClientsController",
+    "Method": "Create",
+    "RelativePath": "api/Clients",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Clients.CreateClientRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Clients.ClientsController",
+    "Method": "GetById",
+    "RelativePath": "api/Clients/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Clients.ClientsController",
+    "Method": "Update",
+    "RelativePath": "api/Clients/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Clients.UpdateClientRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Clients.ClientsController",
+    "Method": "Delete",
+    "RelativePath": "api/Clients/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Clients.ClientsController",
+    "Method": "UpdateAbonnement",
+    "RelativePath": "api/Clients/{id}/abonnement",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Clients.UpdateAbonnementRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Clients.ClientsController",
+    "Method": "GetAbonnes",
+    "RelativePath": "api/Clients/abonnes",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Clients.ClientsController",
+    "Method": "Search",
+    "RelativePath": "api/Clients/search",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "nom",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "telephone",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Composants.ComposantsController",
+    "Method": "GetAll",
+    "RelativePath": "api/Composants",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Composants.ComposantsController",
+    "Method": "Create",
+    "RelativePath": "api/Composants",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Composants.CreateComposantRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Composants.ComposantsController",
+    "Method": "GetById",
+    "RelativePath": "api/Composants/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Composants.ComposantsController",
+    "Method": "Update",
+    "RelativePath": "api/Composants/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Composants.UpdateComposantRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Composants.ComposantsController",
+    "Method": "Delete",
+    "RelativePath": "api/Composants/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Composants.ComposantsController",
+    "Method": "GetByArticle",
+    "RelativePath": "api/Composants/article/{idArticle}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "idArticle",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.CompositionArticle.CompositionArticleController",
+    "Method": "Create",
+    "RelativePath": "api/CompositionArticle",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.CompositionArticle.CreateCompositionArticleRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.CompositionArticle.CompositionArticleController",
+    "Method": "GetById",
+    "RelativePath": "api/CompositionArticle/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.CompositionArticle.CompositionArticleController",
+    "Method": "Update",
+    "RelativePath": "api/CompositionArticle/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.CompositionArticle.UpdateCompositionArticleRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.CompositionArticle.CompositionArticleController",
+    "Method": "Delete",
+    "RelativePath": "api/CompositionArticle/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.CompositionArticle.CompositionArticleController",
+    "Method": "GetByArticle",
+    "RelativePath": "api/CompositionArticle/article/{idArticle}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "idArticle",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.DetailLivraisons.DetailLivraisonsController",
+    "Method": "Create",
+    "RelativePath": "api/DetailLivraisons",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.DetailLivraisons.CreateDetailLivraisonRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.DetailLivraisons.DetailLivraisonsController",
+    "Method": "GetById",
+    "RelativePath": "api/DetailLivraisons/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.DetailLivraisons.DetailLivraisonsController",
+    "Method": "Update",
+    "RelativePath": "api/DetailLivraisons/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.DetailLivraisons.UpdateDetailLivraisonRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.DetailLivraisons.DetailLivraisonsController",
+    "Method": "Delete",
+    "RelativePath": "api/DetailLivraisons/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.DetailLivraisons.DetailLivraisonsController",
+    "Method": "GetByLivraison",
+    "RelativePath": "api/DetailLivraisons/livraison/{idLivraison}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "idLivraison",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.DetailTransactions.DetailTransactionsController",
+    "Method": "Create",
+    "RelativePath": "api/DetailTransactions",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.DetailTransactions.CreateDetailTransactionRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.DetailTransactions.DetailTransactionsController",
+    "Method": "GetById",
+    "RelativePath": "api/DetailTransactions/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.DetailTransactions.DetailTransactionsController",
+    "Method": "Update",
+    "RelativePath": "api/DetailTransactions/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.DetailTransactions.UpdateDetailTransactionRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.DetailTransactions.DetailTransactionsController",
+    "Method": "Delete",
+    "RelativePath": "api/DetailTransactions/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.DetailTransactions.DetailTransactionsController",
+    "Method": "GetByFacture",
+    "RelativePath": "api/DetailTransactions/facture/{idFacture}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "idFacture",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.DomaineRestaurant.DomaineRestaurantController",
+    "Method": "GetAll",
+    "RelativePath": "api/DomaineRestaurant",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.DomaineRestaurant.DomaineRestaurantController",
+    "Method": "Create",
+    "RelativePath": "api/DomaineRestaurant",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.DomaineRestaurant.CreateDomaineRestaurantRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.DomaineRestaurant.DomaineRestaurantController",
+    "Method": "GetById",
+    "RelativePath": "api/DomaineRestaurant/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.DomaineRestaurant.DomaineRestaurantController",
+    "Method": "Update",
+    "RelativePath": "api/DomaineRestaurant/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.DomaineRestaurant.UpdateDomaineRestaurantRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.DomaineRestaurant.DomaineRestaurantController",
+    "Method": "Delete",
+    "RelativePath": "api/DomaineRestaurant/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Entreprise.EntrepriseController",
+    "Method": "GetAll",
+    "RelativePath": "api/Entreprise",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Entreprise.EntrepriseController",
+    "Method": "Create",
+    "RelativePath": "api/Entreprise",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Entreprise.CreateEntrepriseRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Entreprise.EntrepriseController",
+    "Method": "GetById",
+    "RelativePath": "api/Entreprise/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Entreprise.EntrepriseController",
+    "Method": "Update",
+    "RelativePath": "api/Entreprise/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Entreprise.UpdateEntrepriseRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Entreprise.EntrepriseController",
+    "Method": "Delete",
+    "RelativePath": "api/Entreprise/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Factures.FactureController",
+    "Method": "GetAll",
+    "RelativePath": "api/Facture",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dateDebut",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "dateFin",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Factures.FactureController",
+    "Method": "Create",
+    "RelativePath": "api/Facture",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Factures.CreateFactureRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Factures.FactureController",
+    "Method": "GetById",
+    "RelativePath": "api/Facture/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Factures.FactureController",
+    "Method": "Update",
+    "RelativePath": "api/Facture/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Factures.UpdateFactureRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Factures.FactureController",
+    "Method": "Delete",
+    "RelativePath": "api/Facture/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Factures.FactureController",
+    "Method": "AnnulerFacture",
+    "RelativePath": "api/Facture/{id}/annuler",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Factures.FactureController",
+    "Method": "SolderFacture",
+    "RelativePath": "api/Facture/{id}/solder",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Factures.SolderFactureRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Factures.FactureController",
+    "Method": "GetEnAttente",
+    "RelativePath": "api/Facture/enattente",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Factures.FactureController",
+    "Method": "GetNonSoldees",
+    "RelativePath": "api/Facture/nonsoldees",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Fournisseurs.FournisseursController",
+    "Method": "GetAll",
+    "RelativePath": "api/Fournisseurs",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "page",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "pageSize",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Fournisseurs.FournisseursController",
+    "Method": "Create",
+    "RelativePath": "api/Fournisseurs",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Fournisseurs.CreateFournisseurRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Fournisseurs.FournisseursController",
+    "Method": "GetById",
+    "RelativePath": "api/Fournisseurs/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Fournisseurs.FournisseursController",
+    "Method": "Update",
+    "RelativePath": "api/Fournisseurs/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Fournisseurs.UpdateFournisseurRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Fournisseurs.FournisseursController",
+    "Method": "Delete",
+    "RelativePath": "api/Fournisseurs/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Fournisseurs.FournisseursController",
+    "Method": "Search",
+    "RelativePath": "api/Fournisseurs/search",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "nom",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "contact",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "page",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "pageSize",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Livraisons.LivraisonsController",
+    "Method": "GetAll",
+    "RelativePath": "api/Livraisons",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "enCoursOnly",
+        "Type": "System.Nullable\u00601[[System.Boolean, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Livraisons.LivraisonsController",
+    "Method": "Create",
+    "RelativePath": "api/Livraisons",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Livraisons.CreateLivraisonRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Livraisons.LivraisonsController",
+    "Method": "GetById",
+    "RelativePath": "api/Livraisons/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Livraisons.LivraisonsController",
+    "Method": "Update",
+    "RelativePath": "api/Livraisons/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Livraisons.UpdateLivraisonRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Livraisons.LivraisonsController",
+    "Method": "Delete",
+    "RelativePath": "api/Livraisons/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Livraisons.LivraisonsController",
+    "Method": "Terminer",
+    "RelativePath": "api/Livraisons/{id}/terminer",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Livraisons.TerminerLivraisonRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Livreur.LivreurController",
+    "Method": "GetAll",
+    "RelativePath": "api/Livreur",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "disponiblesOnly",
+        "Type": "System.Nullable\u00601[[System.Boolean, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Livreur.LivreurController",
+    "Method": "Create",
+    "RelativePath": "api/Livreur",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Livreur.CreateLivreurRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Livreur.LivreurController",
+    "Method": "GetById",
+    "RelativePath": "api/Livreur/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Livreur.LivreurController",
+    "Method": "Update",
+    "RelativePath": "api/Livreur/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Livreur.UpdateLivreurRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Livreur.LivreurController",
+    "Method": "Delete",
+    "RelativePath": "api/Livreur/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.MatierePremiere.MatierePremiereController",
+    "Method": "GetAll",
+    "RelativePath": "api/MatierePremiere",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.MatierePremiere.MatierePremiereController",
+    "Method": "Create",
+    "RelativePath": "api/MatierePremiere",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.MatierePremiere.CreateMatierePremiereRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.MatierePremiere.MatierePremiereController",
+    "Method": "GetById",
+    "RelativePath": "api/MatierePremiere/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.MatierePremiere.MatierePremiereController",
+    "Method": "Update",
+    "RelativePath": "api/MatierePremiere/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.MatierePremiere.UpdateMatierePremiereRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.MatierePremiere.MatierePremiereController",
+    "Method": "Delete",
+    "RelativePath": "api/MatierePremiere/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.ModelRecu.ModelRecuController",
+    "Method": "Create",
+    "RelativePath": "api/ModelRecu",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.ModelRecu.CreateModelRecuRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.ModelRecu.ModelRecuController",
+    "Method": "GetById",
+    "RelativePath": "api/ModelRecu/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.ModelRecu.ModelRecuController",
+    "Method": "Update",
+    "RelativePath": "api/ModelRecu/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.ModelRecu.UpdateModelRecuRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.ModelRecu.ModelRecuController",
+    "Method": "Delete",
+    "RelativePath": "api/ModelRecu/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.ModelRecu.ModelRecuController",
+    "Method": "GetByEntreprise",
+    "RelativePath": "api/ModelRecu/entreprise",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.MouvementStock.MouvementStockController",
+    "Method": "GetAll",
+    "RelativePath": "api/MouvementStock",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dateDebut",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "dateFin",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.MouvementStock.MouvementStockController",
+    "Method": "Create",
+    "RelativePath": "api/MouvementStock",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.MouvementStock.CreateMouvementStockRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.MouvementStock.MouvementStockController",
+    "Method": "GetById",
+    "RelativePath": "api/MouvementStock/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.MouvementStock.MouvementStockController",
+    "Method": "Update",
+    "RelativePath": "api/MouvementStock/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.MouvementStock.UpdateMouvementStockRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.MouvementStock.MouvementStockController",
+    "Method": "Delete",
+    "RelativePath": "api/MouvementStock/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Organisation.OrganisationController",
+    "Method": "GetAll",
+    "RelativePath": "api/Organisation",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Organisation.OrganisationController",
+    "Method": "Create",
+    "RelativePath": "api/Organisation",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Organisation.CreateOrganisationRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Organisation.OrganisationController",
+    "Method": "GetById",
+    "RelativePath": "api/Organisation/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Organisation.OrganisationController",
+    "Method": "Update",
+    "RelativePath": "api/Organisation/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Organisation.UpdateOrganisationRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Organisation.OrganisationController",
+    "Method": "GetActives",
+    "RelativePath": "api/Organisation/actives",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Organisation.OrganisationController",
+    "Method": "GetByIdentifiant",
+    "RelativePath": "api/Organisation/identifiant/{identifiant}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "identifiant",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Otp.OtpController",
+    "Method": "GenerateOtp",
+    "RelativePath": "api/Otp/generate",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Otp.GenerateOtpRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Otp.OtpController",
+    "Method": "ValidateOtp",
+    "RelativePath": "api/Otp/validate",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Otp.ValidateOtpRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Paiments.PaimentsController",
+    "Method": "GetAll",
+    "RelativePath": "api/Paiments",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dateDebut",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "dateFin",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Paiments.PaimentsController",
+    "Method": "Create",
+    "RelativePath": "api/Paiments",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Paiments.CreatePaiementRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Paiments.PaimentsController",
+    "Method": "GetById",
+    "RelativePath": "api/Paiments/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Paiments.PaimentsController",
+    "Method": "Update",
+    "RelativePath": "api/Paiments/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Paiments.UpdatePaiementRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Paiments.PaimentsController",
+    "Method": "Delete",
+    "RelativePath": "api/Paiments/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.ParametrePos.ParametrePosController",
+    "Method": "Create",
+    "RelativePath": "api/ParametrePos",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.ParametrePos.CreateParametrePosRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.ParametrePos.ParametrePosController",
+    "Method": "GetById",
+    "RelativePath": "api/ParametrePos/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.ParametrePos.ParametrePosController",
+    "Method": "Update",
+    "RelativePath": "api/ParametrePos/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.ParametrePos.UpdateParametrePosRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.ParametrePos.ParametrePosController",
+    "Method": "Delete",
+    "RelativePath": "api/ParametrePos/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.ParametrePos.ParametrePosController",
+    "Method": "GetByEntreprise",
+    "RelativePath": "api/ParametrePos/entreprise",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Plans.PlansController",
+    "Method": "GetAll",
+    "RelativePath": "api/Plans",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Plans.PlansController",
+    "Method": "GetById",
+    "RelativePath": "api/Plans/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Plans.PlansController",
+    "Method": "GetActifs",
+    "RelativePath": "api/Plans/actifs",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Plans.PlansController",
+    "Method": "GetByName",
+    "RelativePath": "api/Plans/by-name/{name}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "name",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Plans.PlansController",
+    "Method": "ComparePlans",
+    "RelativePath": "api/Plans/compare",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Plans.PlansController",
+    "Method": "GetPlansWithFeatures",
+    "RelativePath": "api/Plans/features",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Registration.RegistrationController",
+    "Method": "CheckEmailAvailability",
+    "RelativePath": "api/Registration/check-email",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "email",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Registration.RegistrationController",
+    "Method": "GetAvailablePlans",
+    "RelativePath": "api/Registration/plans",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Registration.RegistrationController",
+    "Method": "Register",
+    "RelativePath": "api/Registration/register",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Registration.RegistrationRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Serveur.ServeurController",
+    "Method": "GetAll",
+    "RelativePath": "api/Serveur",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Serveur.ServeurController",
+    "Method": "Create",
+    "RelativePath": "api/Serveur",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Serveur.CreateServeurRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Serveur.ServeurController",
+    "Method": "GetById",
+    "RelativePath": "api/Serveur/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Serveur.ServeurController",
+    "Method": "Update",
+    "RelativePath": "api/Serveur/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Serveur.UpdateServeurRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Serveur.ServeurController",
+    "Method": "Delete",
+    "RelativePath": "api/Serveur/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Sessions.SessionsController",
+    "Method": "GetAll",
+    "RelativePath": "api/Sessions",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "cloturees",
+        "Type": "System.Nullable\u00601[[System.Boolean, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Sessions.SessionsController",
+    "Method": "Create",
+    "RelativePath": "api/Sessions",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Sessions.CreateSessionRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Sessions.SessionsController",
+    "Method": "GetById",
+    "RelativePath": "api/Sessions/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Sessions.SessionsController",
+    "Method": "Update",
+    "RelativePath": "api/Sessions/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Sessions.UpdateSessionRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Sessions.SessionsController",
+    "Method": "Delete",
+    "RelativePath": "api/Sessions/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Sessions.SessionsController",
+    "Method": "Cloturer",
+    "RelativePath": "api/Sessions/{id}/cloturer",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Sessions.ClotureSessionRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Sessions.SessionsController",
+    "Method": "GetSessionOuverte",
+    "RelativePath": "api/Sessions/ouverte",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Subscription.SubscriptionController",
+    "Method": "GetLimits",
+    "RelativePath": "api/Subscription/limits/{idEntreprise}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "idEntreprise",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Subscription.SubscriptionController",
+    "Method": "GetUsage",
+    "RelativePath": "api/Subscription/usage/{idEntreprise}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "idEntreprise",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Subscription.SubscriptionController",
+    "Method": "ValidateOperation",
+    "RelativePath": "api/Subscription/validate-operation",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Subscription.ValidateOperationRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Subscription.SubscriptionController",
+    "Method": "ValidateSubscription",
+    "RelativePath": "api/Subscription/validate/{idEntreprise}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "idEntreprise",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "apiKey",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Synchronisation.SyncController",
+    "Method": "ApplyChange",
+    "RelativePath": "api/Sync/apply",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Synchronisation.SyncRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Synchronisation.SyncController",
+    "Method": "DatabaseTest",
+    "RelativePath": "api/Sync/db-test",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "apiKey",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Synchronisation.SyncController",
+    "Method": "Health",
+    "RelativePath": "api/Sync/health",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Synchronisation.SyncController",
+    "Method": "MarkAsSynced",
+    "RelativePath": "api/Sync/mark-synced",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Synchronisation.MarkSyncedRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Synchronisation.SyncController",
+    "Method": "GetPendingChanges",
+    "RelativePath": "api/Sync/pending",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "idEntreprise",
+        "Type": "System.Guid",
+        "IsRequired": false
+      },
+      {
+        "Name": "apiKey",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "since",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "maxResults",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "direction",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Synchronisation.SyncController",
+    "Method": "GetStatistics",
+    "RelativePath": "api/Sync/statistics/{idEntreprise}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "idEntreprise",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "apiKey",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Table.TableController",
+    "Method": "GetAll",
+    "RelativePath": "api/Table",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Table.TableController",
+    "Method": "Create",
+    "RelativePath": "api/Table",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Table.CreateTableRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Table.TableController",
+    "Method": "GetById",
+    "RelativePath": "api/Table/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Table.TableController",
+    "Method": "Update",
+    "RelativePath": "api/Table/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Table.UpdateTableRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Table.TableController",
+    "Method": "Delete",
+    "RelativePath": "api/Table/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Table.TableController",
+    "Method": "AffecterServeur",
+    "RelativePath": "api/Table/{id}/affecter",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Table.AffecterServeurRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Table.TableController",
+    "Method": "LibererTable",
+    "RelativePath": "api/Table/{id}/liberer",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Table.TableController",
+    "Method": "GetDisponibles",
+    "RelativePath": "api/Table/disponibles",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.TypePaiement.TypePaiementController",
+    "Method": "GetAll",
+    "RelativePath": "api/TypePaiement",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.TypePaiement.TypePaiementController",
+    "Method": "Create",
+    "RelativePath": "api/TypePaiement",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.TypePaiement.CreateTypePaiementRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.TypePaiement.TypePaiementController",
+    "Method": "GetById",
+    "RelativePath": "api/TypePaiement/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.TypePaiement.TypePaiementController",
+    "Method": "Update",
+    "RelativePath": "api/TypePaiement/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.TypePaiement.UpdateTypePaiementRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.TypePaiement.TypePaiementController",
+    "Method": "Delete",
+    "RelativePath": "api/TypePaiement/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.TypeServices.TypeServicesController",
+    "Method": "GetAll",
+    "RelativePath": "api/TypeServices",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.TypeServices.TypeServicesController",
+    "Method": "Create",
+    "RelativePath": "api/TypeServices",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.TypeServices.CreateTypeServiceRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.TypeServices.TypeServicesController",
+    "Method": "GetById",
+    "RelativePath": "api/TypeServices/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.TypeServices.TypeServicesController",
+    "Method": "Update",
+    "RelativePath": "api/TypeServices/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.TypeServices.UpdateTypeServiceRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.TypeServices.TypeServicesController",
+    "Method": "Delete",
+    "RelativePath": "api/TypeServices/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.UniteMesures.UniteMesuresController",
+    "Method": "GetAll",
+    "RelativePath": "api/UniteMesures",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.UniteMesures.UniteMesuresController",
+    "Method": "Create",
+    "RelativePath": "api/UniteMesures",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.UniteMesures.CreateUniteMesureRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.UniteMesures.UniteMesuresController",
+    "Method": "GetById",
+    "RelativePath": "api/UniteMesures/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.UniteMesures.UniteMesuresController",
+    "Method": "Update",
+    "RelativePath": "api/UniteMesures/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.UniteMesures.UpdateUniteMesureRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.UniteMesures.UniteMesuresController",
+    "Method": "Delete",
+    "RelativePath": "api/UniteMesures/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Users.UsersController",
+    "Method": "GetAll",
+    "RelativePath": "api/Users",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Users.UsersController",
+    "Method": "Create",
+    "RelativePath": "api/Users",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Users.CreateUserRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Users.UsersController",
+    "Method": "GetById",
+    "RelativePath": "api/Users/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Users.UsersController",
+    "Method": "Update",
+    "RelativePath": "api/Users/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Users.UpdateUserRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Users.UsersController",
+    "Method": "Delete",
+    "RelativePath": "api/Users/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.WeatherForecastController",
+    "Method": "Get",
+    "RelativePath": "WeatherForecast",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "System.Collections.Generic.IEnumerable\u00601[[Api_BuildTech.WeatherForecast, Api_BuildTech, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ],
+    "EndpointName": "GetWeatherForecast"
+  }
+]
