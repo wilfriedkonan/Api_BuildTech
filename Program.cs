@@ -1,4 +1,5 @@
-﻿using Api_BuildTech.Controllers.Articles;
+﻿using Api_BuildTech.Controllers.ArticleStock;
+using Api_BuildTech.Controllers.Articles;
 using Api_BuildTech.Controllers.Authentication;
 using Api_BuildTech.Controllers.AutresMagasin;
 using Api_BuildTech.Controllers.Categorie;
@@ -424,13 +425,13 @@ builder.Services.AddScoped<MatierePremiereService>(sp =>
         sp.GetRequiredService<IHttpContextAccessor>()
     ));
 
-// STOCK
-//builder.Services.AddScoped<StockService>(sp =>
-//    new StockService(
-//        connectionString,
-//        sp.GetRequiredService<ILogger<StockService>>(),
-//        sp.GetRequiredService<IHttpContextAccessor>()
-//    ));
+// VU STOCK + ARTICLE 
+builder.Services.AddScoped<ArticleStockService>(sp =>
+    new ArticleStockService(
+        connectionString,
+        sp.GetRequiredService<ILogger<ArticleStockService>>(),
+        sp.GetRequiredService<IHttpContextAccessor>()
+    ));
 
 // COMPOSITION_ARTICLE
 

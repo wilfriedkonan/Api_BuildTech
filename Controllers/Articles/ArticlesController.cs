@@ -171,20 +171,20 @@ namespace Api_BuildTech.Controllers.Articles
         /// GET STOCK - Récupère tous les articles stockables
         /// </summary>
         // GET STOCK
-        [HttpGet("stock")]
-        public async Task<IActionResult> GetStockArticles(
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 20)
-        {
-            var result = await _articlesService.GetStockArticlesAsync(page, pageSize);
-            return Ok(new
-            {
-                success = result.Success,
-                total = result.Total,
-                pagination = result.Pagination,
-                data = result.Articles
-            });
-        }
+        //[HttpGet("stock")]
+        //public async Task<IActionResult> GetStockArticles(
+        //    [FromQuery] int page = 1,
+        //    [FromQuery] int pageSize = 20)
+        //{
+        //    var result = await _articlesService.GetStockArticlesAsync(page, pageSize);
+        //    return Ok(new
+        //    {
+        //        success = result.Success,
+        //        total = result.Total,
+        //        pagination = result.Pagination,
+        //        data = result.Articles
+        //    });
+        //}
 
         /// <summary>
         /// GET STOCK ACTUEL - Calcule le stock actuel d'un article
@@ -330,343 +330,343 @@ namespace Api_BuildTech.Controllers.Articles
         /// <summary>
         /// GET ALERTES - Récupère les articles en alerte de stock
         /// </summary>
-        [HttpGet("alertes")]
-        public async Task<IActionResult> GetArticlesEnAlerte()
-        {
-            try
-            {
-                var result = await _articlesService.GetStockArticlesAsync();
+        //[HttpGet("alertes")]
+        //public async Task<IActionResult> GetArticlesEnAlerte()
+        //{
+        //    try
+        //    {
+        //        var result = await _articlesService.GetStockArticlesAsync();
 
-                var articlesEnAlerte = result.Articles
-                    .Where(a => a.AlerteStock)
-                    .OrderBy(a => a.StockActuel)
-                    .ToList();
+        //        var articlesEnAlerte = result.Articles
+        //            .Where(a => a.AlerteStock)
+        //            .OrderBy(a => a.StockActuel)
+        //            .ToList();
 
-                return Ok(new
-                {
-                    success = true,
-                    total = articlesEnAlerte.Count,
-                    data = articlesEnAlerte
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erreur récupération alertes stock");
-                return StatusCode(500, new { success = false, message = "Erreur serveur" });
-            }
-        }
+        //        return Ok(new
+        //        {
+        //            success = true,
+        //            total = articlesEnAlerte.Count,
+        //            data = articlesEnAlerte
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Erreur récupération alertes stock");
+        //        return StatusCode(500, new { success = false, message = "Erreur serveur" });
+        //    }
+        //}
 
-        /// <summary>
-        /// GET RUPTURE - Récupère les articles en rupture de stock
-        /// </summary>
-        [HttpGet("rupture")]
-        public async Task<IActionResult> GetArticlesEnRupture()
-        {
-            try
-            {
-                var result = await _articlesService.GetStockArticlesAsync();
+        ///// <summary>
+        ///// GET RUPTURE - Récupère les articles en rupture de stock
+        ///// </summary>
+        //[HttpGet("rupture")]
+        //public async Task<IActionResult> GetArticlesEnRupture()
+        //{
+        //    try
+        //    {
+        //        var result = await _articlesService.GetStockArticlesAsync();
 
-                var articlesEnRupture = result.Articles
-                    .Where(a => a.StockActuel <= 0)
-                    .OrderBy(a => a.Designation)
-                    .ToList();
+        //        var articlesEnRupture = result.Articles
+        //            .Where(a => a.StockActuel <= 0)
+        //            .OrderBy(a => a.Designation)
+        //            .ToList();
 
-                return Ok(new
-                {
-                    success = true,
-                    total = articlesEnRupture.Count,
-                    data = articlesEnRupture
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erreur récupération ruptures stock");
-                return StatusCode(500, new { success = false, message = "Erreur serveur" });
-            }
-        }
+        //        return Ok(new
+        //        {
+        //            success = true,
+        //            total = articlesEnRupture.Count,
+        //            data = articlesEnRupture
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Erreur récupération ruptures stock");
+        //        return StatusCode(500, new { success = false, message = "Erreur serveur" });
+        //    }
+        //}
 
-        /// <summary>
-        /// GET STATISTIQUES - Statistiques globales des articles
-        /// </summary>
-        [HttpGet("statistiques")]
-        public async Task<IActionResult> GetStatistiques()
-        {
-            try
-            {
-                var result = await _articlesService.GetAllAsync();
+        ///// <summary>
+        ///// GET STATISTIQUES - Statistiques globales des articles
+        ///// </summary>
+        //[HttpGet("statistiques")]
+        //public async Task<IActionResult> GetStatistiques()
+        //{
+        //    try
+        //    {
+        //        var result = await _articlesService.GetAllAsync();
 
-                var stats = new
-                {
-                    totalArticles = result.Total,
-                    totalActifs = result.Articles.Count(a => a.Etat == "Actif"),
-                    totalInactifs = result.Articles.Count(a => a.Etat != "Actif"),
-                    totalStockables = result.TotalStockables,
-                    totalEnAlerte = result.TotalEnAlerte,
-                    totalEnRupture = result.Articles.Count(a => a.EstStockable == true && a.StockActuel <= 0),
-                    totalPOS = result.Articles.Count(a => a.EstPos == true),
-                    totalPromo = result.Articles.Count(a => a.EstPromo == true),
-                    valeurStockTotal = result.Articles
-                        .Where(a => a.EstStockable == true)
-                        .Sum(a => a.StockActuel * (a.PrixAchat ?? 0)),
-                    prixMoyenVente = result.Articles.Any()
-                        ? result.Articles.Average(a => a.PrixVente ?? 0)
-                        : 0,
-                    prixMoyenAchat = result.Articles.Any()
-                        ? result.Articles.Average(a => a.PrixAchat ?? 0)
-                        : 0
-                };
+        //        var stats = new
+        //        {
+        //            totalArticles = result.Total,
+        //            totalActifs = result.Articles.Count(a => a.Etat == "Actif"),
+        //            totalInactifs = result.Articles.Count(a => a.Etat != "Actif"),
+        //            totalStockables = result.TotalStockables,
+        //            totalEnAlerte = result.TotalEnAlerte,
+        //            totalEnRupture = result.Articles.Count(a => a.EstStockable == true && a.StockActuel <= 0),
+        //            totalPOS = result.Articles.Count(a => a.EstPos == true),
+        //            totalPromo = result.Articles.Count(a => a.EstPromo == true),
+        //            valeurStockTotal = result.Articles
+        //                .Where(a => a.EstStockable == true)
+        //                .Sum(a => a.StockActuel * (a.PrixAchat ?? 0)),
+        //            prixMoyenVente = result.Articles.Any()
+        //                ? result.Articles.Average(a => a.PrixVente ?? 0)
+        //                : 0,
+        //            prixMoyenAchat = result.Articles.Any()
+        //                ? result.Articles.Average(a => a.PrixAchat ?? 0)
+        //                : 0
+        //        };
 
-                return Ok(new
-                {
-                    success = true,
-                    data = stats
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erreur récupération statistiques");
-                return StatusCode(500, new { success = false, message = "Erreur serveur" });
-            }
-        }
+        //        return Ok(new
+        //        {
+        //            success = true,
+        //            data = stats
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Erreur récupération statistiques");
+        //        return StatusCode(500, new { success = false, message = "Erreur serveur" });
+        //    }
+        //}
 
 
-        /// <summary>
-        /// GET STOCK VIEW - Récupère les stocks depuis la vue avec pagination et filtres
-        /// </summary>
-        [HttpGet("stock/view")]
-        public async Task<IActionResult> GetStockArticlesFromView(
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 20,
-            [FromQuery] string? statutStock = null,
-            [FromQuery] string? designationCategorie = null,
-            [FromQuery] string? searchTerm = null,
-            [FromQuery] decimal? stockMin = null,
-            [FromQuery] decimal? stockMax = null,
-            [FromQuery] bool? alertesOnly = null,
-            [FromQuery] string orderBy = "designation",
-            [FromQuery] string orderDirection = "asc")
-        {
-            try
-            {
-                var filter = new StockArticleFilterRequest
-                {
-                    StatutStock = statutStock,
-                    DesignationCategorie = designationCategorie,
-                    SearchTerm = searchTerm,
-                    StockMin = stockMin,
-                    StockMax = stockMax,
-                    AlertesOnly = alertesOnly,
-                    OrderBy = orderBy,
-                    OrderDirection = orderDirection
-                };
+        ///// <summary>
+        ///// GET STOCK VIEW - Récupère les stocks depuis la vue avec pagination et filtres
+        ///// </summary>
+        //[HttpGet("stock/view")]
+        //public async Task<IActionResult> GetStockArticlesFromView(
+        //    [FromQuery] int page = 1,
+        //    [FromQuery] int pageSize = 20,
+        //    [FromQuery] string? statutStock = null,
+        //    [FromQuery] string? designationCategorie = null,
+        //    [FromQuery] string? searchTerm = null,
+        //    [FromQuery] decimal? stockMin = null,
+        //    [FromQuery] decimal? stockMax = null,
+        //    [FromQuery] bool? alertesOnly = null,
+        //    [FromQuery] string orderBy = "designation",
+        //    [FromQuery] string orderDirection = "asc")
+        //{
+        //    try
+        //    {
+        //        var filter = new StockArticleFilterRequest
+        //        {
+        //            StatutStock = statutStock,
+        //            DesignationCategorie = designationCategorie,
+        //            SearchTerm = searchTerm,
+        //            StockMin = stockMin,
+        //            StockMax = stockMax,
+        //            AlertesOnly = alertesOnly,
+        //            OrderBy = orderBy,
+        //            OrderDirection = orderDirection
+        //        };
 
-                var result = await _articlesService.GetStockArticlesFromViewAsync(filter, page, pageSize);
+        //        var result = await _articlesService.GetStockArticlesFromViewAsync(filter, page, pageSize);
 
-                return Ok(new
-                {
-                    success = result.Success,
-                    total = result.Total,
-                    totalEnStock = result.TotalEnStock,
-                    totalEnAlerte = result.TotalEnAlerte,
-                    totalEnRupture = result.TotalEnRupture,
-                    pagination = result.Pagination,
-                    data = result.Stocks
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erreur récupération stocks vue");
-                return StatusCode(500, new { success = false, message = "Erreur serveur" });
-            }
-        }
+        //        return Ok(new
+        //        {
+        //            success = result.Success,
+        //            total = result.Total,
+        //            totalEnStock = result.TotalEnStock,
+        //            totalEnAlerte = result.TotalEnAlerte,
+        //            totalEnRupture = result.TotalEnRupture,
+        //            pagination = result.Pagination,
+        //            data = result.Stocks
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Erreur récupération stocks vue");
+        //        return StatusCode(500, new { success = false, message = "Erreur serveur" });
+        //    }
+        //}
 
-        /// <summary>
-        /// GET STOCK STATISTICS - Statistiques globales de stock
-        /// </summary>
-        [HttpGet("stock/statistics")]
-        public async Task<IActionResult> GetStockStatistics()
-        {
-            try
-            {
-                var stats = await _articlesService.GetStockStatisticsAsync();
+        ///// <summary>
+        ///// GET STOCK STATISTICS - Statistiques globales de stock
+        ///// </summary>
+        //[HttpGet("stock/statistics")]
+        //public async Task<IActionResult> GetStockStatistics()
+        //{
+        //    try
+        //    {
+        //        var stats = await _articlesService.GetStockStatisticsAsync();
 
-                return Ok(new
-                {
-                    success = true,
-                    data = stats
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erreur récupération statistiques stock");
-                return StatusCode(500, new { success = false, message = "Erreur serveur" });
-            }
-        }
+        //        return Ok(new
+        //        {
+        //            success = true,
+        //            data = stats
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Erreur récupération statistiques stock");
+        //        return StatusCode(500, new { success = false, message = "Erreur serveur" });
+        //    }
+        //}
 
-        /// <summary>
-        /// GET STOCK ALERTS - Uniquement les articles en alerte ou rupture
-        /// </summary>
-        [HttpGet("stock/alerts")]
-        public async Task<IActionResult> GetStockAlerts(
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 20)
-        {
-            try
-            {
-                var filter = new StockArticleFilterRequest
-                {
-                    AlertesOnly = true,
-                    OrderBy = "statut",
-                    OrderDirection = "desc"
-                };
+        ///// <summary>
+        ///// GET STOCK ALERTS - Uniquement les articles en alerte ou rupture
+        ///// </summary>
+        //[HttpGet("stock/alerts")]
+        //public async Task<IActionResult> GetStockAlerts(
+        //    [FromQuery] int page = 1,
+        //    [FromQuery] int pageSize = 20)
+        //{
+        //    try
+        //    {
+        //        var filter = new StockArticleFilterRequest
+        //        {
+        //            AlertesOnly = true,
+        //            OrderBy = "statut",
+        //            OrderDirection = "desc"
+        //        };
 
-                var result = await _articlesService.GetStockArticlesFromViewAsync(filter, page, pageSize);
+        //        var result = await _articlesService.GetStockArticlesFromViewAsync(filter, page, pageSize);
 
-                return Ok(new
-                {
-                    success = result.Success,
-                    total = result.Total,
-                    totalAlerte = result.TotalEnAlerte,
-                    totalRupture = result.TotalEnRupture,
-                    pagination = result.Pagination,
-                    data = result.Stocks
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erreur récupération alertes stock");
-                return StatusCode(500, new { success = false, message = "Erreur serveur" });
-            }
-        }
+        //        return Ok(new
+        //        {
+        //            success = result.Success,
+        //            total = result.Total,
+        //            totalAlerte = result.TotalEnAlerte,
+        //            totalRupture = result.TotalEnRupture,
+        //            pagination = result.Pagination,
+        //            data = result.Stocks
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Erreur récupération alertes stock");
+        //        return StatusCode(500, new { success = false, message = "Erreur serveur" });
+        //    }
+        //}
 
-        /// <summary>
-        /// GET STOCK BY STATUS - Articles par statut spécifique
-        /// </summary>
-        [HttpGet("stock/by-status/{status}")]
-        public async Task<IActionResult> GetStockByStatus(
-            string status,
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 20)
-        {
-            try
-            {
-                // Valider le statut
-                var validStatuses = new[] { "En stock", "Alerte", "Rupture" };
-                if (!validStatuses.Contains(status, StringComparer.OrdinalIgnoreCase))
-                {
-                    return BadRequest(new
-                    {
-                        success = false,
-                        message = $"Statut invalide. Valeurs autorisées: {string.Join(", ", validStatuses)}"
-                    });
-                }
+        ///// <summary>
+        ///// GET STOCK BY STATUS - Articles par statut spécifique
+        ///// </summary>
+        //[HttpGet("stock/by-status/{status}")]
+        //public async Task<IActionResult> GetStockByStatus(
+        //    string status,
+        //    [FromQuery] int page = 1,
+        //    [FromQuery] int pageSize = 20)
+        //{
+        //    try
+        //    {
+        //        // Valider le statut
+        //        var validStatuses = new[] { "En stock", "Alerte", "Rupture" };
+        //        if (!validStatuses.Contains(status, StringComparer.OrdinalIgnoreCase))
+        //        {
+        //            return BadRequest(new
+        //            {
+        //                success = false,
+        //                message = $"Statut invalide. Valeurs autorisées: {string.Join(", ", validStatuses)}"
+        //            });
+        //        }
 
-                var filter = new StockArticleFilterRequest
-                {
-                    StatutStock = status,
-                    OrderBy = "stock",
-                    OrderDirection = "asc"
-                };
+        //        var filter = new StockArticleFilterRequest
+        //        {
+        //            StatutStock = status,
+        //            OrderBy = "stock",
+        //            OrderDirection = "asc"
+        //        };
 
-                var result = await _articlesService.GetStockArticlesFromViewAsync(filter, page, pageSize);
+        //        var result = await _articlesService.GetStockArticlesFromViewAsync(filter, page, pageSize);
 
-                return Ok(new
-                {
-                    success = result.Success,
-                    status = status,
-                    total = result.Total,
-                    pagination = result.Pagination,
-                    data = result.Stocks
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Erreur récupération stock par statut {status}");
-                return StatusCode(500, new { success = false, message = "Erreur serveur" });
-            }
-        }
+        //        return Ok(new
+        //        {
+        //            success = result.Success,
+        //            status = status,
+        //            total = result.Total,
+        //            pagination = result.Pagination,
+        //            data = result.Stocks
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, $"Erreur récupération stock par statut {status}");
+        //        return StatusCode(500, new { success = false, message = "Erreur serveur" });
+        //    }
+        //}
 
-        /// <summary>
-        /// GET STOCK BY CATEGORY - Articles par catégorie
-        /// </summary>
-        [HttpGet("stock/by-category/{categorie}")]
-        public async Task<IActionResult> GetStockByCategory(
-            string categorie,
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 20)
-        {
-            try
-            {
-                var filter = new StockArticleFilterRequest
-                {
-                    DesignationCategorie = categorie,
-                    OrderBy = "stock",
-                    OrderDirection = "asc"
-                };
+        ///// <summary>
+        ///// GET STOCK BY CATEGORY - Articles par catégorie
+        ///// </summary>
+        //[HttpGet("stock/by-category/{categorie}")]
+        //public async Task<IActionResult> GetStockByCategory(
+        //    string categorie,
+        //    [FromQuery] int page = 1,
+        //    [FromQuery] int pageSize = 20)
+        //{
+        //    try
+        //    {
+        //        var filter = new StockArticleFilterRequest
+        //        {
+        //            DesignationCategorie = categorie,
+        //            OrderBy = "stock",
+        //            OrderDirection = "asc"
+        //        };
 
-                var result = await _articlesService.GetStockArticlesFromViewAsync(filter, page, pageSize);
+        //        var result = await _articlesService.GetStockArticlesFromViewAsync(filter, page, pageSize);
 
-                return Ok(new
-                {
-                    success = result.Success,
-                    categorie = categorie,
-                    total = result.Total,
-                    totalEnAlerte = result.TotalEnAlerte,
-                    totalEnRupture = result.TotalEnRupture,
-                    pagination = result.Pagination,
-                    data = result.Stocks
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Erreur récupération stock catégorie {categorie}");
-                return StatusCode(500, new { success = false, message = "Erreur serveur" });
-            }
-        }
+        //        return Ok(new
+        //        {
+        //            success = result.Success,
+        //            categorie = categorie,
+        //            total = result.Total,
+        //            totalEnAlerte = result.TotalEnAlerte,
+        //            totalEnRupture = result.TotalEnRupture,
+        //            pagination = result.Pagination,
+        //            data = result.Stocks
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, $"Erreur récupération stock catégorie {categorie}");
+        //        return StatusCode(500, new { success = false, message = "Erreur serveur" });
+        //    }
+        //}
 
-        /// <summary>
-        /// SEARCH STOCK - Recherche d'articles par terme
-        /// </summary>
-        [HttpGet("stock/search")]
-        public async Task<IActionResult> SearchStock(
-            [FromQuery] string term,
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 20)
-        {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(term))
-                {
-                    return BadRequest(new
-                    {
-                        success = false,
-                        message = "Le terme de recherche est requis"
-                    });
-                }
+        ///// <summary>
+        ///// SEARCH STOCK - Recherche d'articles par terme
+        ///// </summary>
+        //[HttpGet("stock/search")]
+        //public async Task<IActionResult> SearchStock(
+        //    [FromQuery] string term,
+        //    [FromQuery] int page = 1,
+        //    [FromQuery] int pageSize = 20)
+        //{
+        //    try
+        //    {
+        //        if (string.IsNullOrWhiteSpace(term))
+        //        {
+        //            return BadRequest(new
+        //            {
+        //                success = false,
+        //                message = "Le terme de recherche est requis"
+        //            });
+        //        }
 
-                var filter = new StockArticleFilterRequest
-                {
-                    SearchTerm = term,
-                    OrderBy = "designation",
-                    OrderDirection = "asc"
-                };
+        //        var filter = new StockArticleFilterRequest
+        //        {
+        //            SearchTerm = term,
+        //            OrderBy = "designation",
+        //            OrderDirection = "asc"
+        //        };
 
-                var result = await _articlesService.GetStockArticlesFromViewAsync(filter, page, pageSize);
+        //        var result = await _articlesService.GetStockArticlesFromViewAsync(filter, page, pageSize);
 
-                return Ok(new
-                {
-                    success = result.Success,
-                    searchTerm = term,
-                    total = result.Total,
-                    pagination = result.Pagination,
-                    data = result.Stocks
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Erreur recherche stock: {term}");
-                return StatusCode(500, new { success = false, message = "Erreur serveur" });
-            }
-        }
+        //        return Ok(new
+        //        {
+        //            success = result.Success,
+        //            searchTerm = term,
+        //            total = result.Total,
+        //            pagination = result.Pagination,
+        //            data = result.Stocks
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, $"Erreur recherche stock: {term}");
+        //        return StatusCode(500, new { success = false, message = "Erreur serveur" });
+        //    }
+        //}
     }
 }

@@ -200,38 +200,6 @@
         }
       }
     },
-    "/api/Articles/stock": {
-      "get": {
-        "tags": [
-          "Articles"
-        ],
-        "parameters": [
-          {
-            "name": "page",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "default": 1
-            }
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "default": 20
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
     "/api/Articles/{id}/stock": {
       "get": {
         "tags": [
@@ -255,68 +223,21 @@
         }
       }
     },
-    "/api/Articles/alertes": {
+    "/api/stock": {
       "get": {
         "tags": [
-          "Articles"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/Articles/rupture": {
-      "get": {
-        "tags": [
-          "Articles"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/Articles/statistiques": {
-      "get": {
-        "tags": [
-          "Articles"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/Articles/stock/view": {
-      "get": {
-        "tags": [
-          "Articles"
+          "ArticleStock"
         ],
         "parameters": [
           {
-            "name": "page",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "default": 1
-            }
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "default": 20
-            }
-          },
-          {
             "name": "statutStock",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "etat",
             "in": "query",
             "schema": {
               "type": "string"
@@ -360,6 +281,27 @@
             }
           },
           {
+            "name": "estPosOnly",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "estStockableOnly",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "estPromoOnly",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
             "name": "orderBy",
             "in": "query",
             "schema": {
@@ -374,6 +316,24 @@
               "type": "string",
               "default": "asc"
             }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 20
+            }
           }
         ],
         "responses": {
@@ -383,10 +343,10 @@
         }
       }
     },
-    "/api/Articles/stock/statistics": {
+    "/api/stock/statistics": {
       "get": {
         "tags": [
-          "Articles"
+          "ArticleStock"
         ],
         "responses": {
           "200": {
@@ -395,10 +355,10 @@
         }
       }
     },
-    "/api/Articles/stock/alerts": {
+    "/api/stock/alerts": {
       "get": {
         "tags": [
-          "Articles"
+          "ArticleStock"
         ],
         "parameters": [
           {
@@ -427,10 +387,10 @@
         }
       }
     },
-    "/api/Articles/stock/by-status/{status}": {
+    "/api/stock/by-status/{status}": {
       "get": {
         "tags": [
-          "Articles"
+          "ArticleStock"
         ],
         "parameters": [
           {
@@ -467,10 +427,10 @@
         }
       }
     },
-    "/api/Articles/stock/by-category/{categorie}": {
+    "/api/stock/by-category/{categorie}": {
       "get": {
         "tags": [
-          "Articles"
+          "ArticleStock"
         ],
         "parameters": [
           {
@@ -507,10 +467,10 @@
         }
       }
     },
-    "/api/Articles/stock/search": {
+    "/api/stock/search": {
       "get": {
         "tags": [
-          "Articles"
+          "ArticleStock"
         ],
         "parameters": [
           {
@@ -536,6 +496,93 @@
               "type": "integer",
               "format": "int32",
               "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/stock/pos": {
+      "get": {
+        "tags": [
+          "ArticleStock"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/stock/promo": {
+      "get": {
+        "tags": [
+          "ArticleStock"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/stock/{id}": {
+      "get": {
+        "tags": [
+          "ArticleStock"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -5792,6 +5839,10 @@
             "type": "string",
             "nullable": true
           },
+          "motif": {
+            "type": "string",
+            "nullable": true
+          },
           "idArticle": {
             "type": "string",
             "format": "uuid",
@@ -6806,6 +6857,10 @@
             "nullable": true
           },
           "commentaire": {
+            "type": "string",
+            "nullable": true
+          },
+          "motif": {
             "type": "string",
             "nullable": true
           }

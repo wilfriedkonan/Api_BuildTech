@@ -8,6 +8,8 @@ C:\Users\kan_w\source\repos\Api_BuildTech\Api_BuildTech\bin\Debug\net8.0\Api_Bui
 C:\Users\kan_w\source\repos\Api_BuildTech\Api_BuildTech\bin\Debug\net8.0\Api_BuildTech.pdb
 C:\Users\kan_w\source\repos\Api_BuildTech\Api_BuildTech\bin\Debug\net8.0\Azure.Core.dll
 C:\Users\kan_w\source\repos\Api_BuildTech\Api_BuildTech\bin\Debug\net8.0\Azure.Identity.dll
+C:\Users\kan_w\source\repos\Api_BuildTech\Api_BuildTech\bin\Debug\net8.0\BouncyCastle.Cryptography.dll
+C:\Users\kan_w\source\repos\Api_BuildTech\Api_BuildTech\bin\Debug\net8.0\MailKit.dll
 C:\Users\kan_w\source\repos\Api_BuildTech\Api_BuildTech\bin\Debug\net8.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
 C:\Users\kan_w\source\repos\Api_BuildTech\Api_BuildTech\bin\Debug\net8.0\Microsoft.Bcl.AsyncInterfaces.dll
 C:\Users\kan_w\source\repos\Api_BuildTech\Api_BuildTech\bin\Debug\net8.0\Microsoft.Data.SqlClient.dll
@@ -25,6 +27,7 @@ C:\Users\kan_w\source\repos\Api_BuildTech\Api_BuildTech\bin\Debug\net8.0\Microso
 C:\Users\kan_w\source\repos\Api_BuildTech\Api_BuildTech\bin\Debug\net8.0\Microsoft.IdentityModel.Tokens.dll
 C:\Users\kan_w\source\repos\Api_BuildTech\Api_BuildTech\bin\Debug\net8.0\Microsoft.OpenApi.dll
 C:\Users\kan_w\source\repos\Api_BuildTech\Api_BuildTech\bin\Debug\net8.0\Microsoft.SqlServer.Server.dll
+C:\Users\kan_w\source\repos\Api_BuildTech\Api_BuildTech\bin\Debug\net8.0\MimeKit.dll
 C:\Users\kan_w\source\repos\Api_BuildTech\Api_BuildTech\bin\Debug\net8.0\Swashbuckle.AspNetCore.Swagger.dll
 C:\Users\kan_w\source\repos\Api_BuildTech\Api_BuildTech\bin\Debug\net8.0\Swashbuckle.AspNetCore.SwaggerGen.dll
 C:\Users\kan_w\source\repos\Api_BuildTech\Api_BuildTech\bin\Debug\net8.0\Swashbuckle.AspNetCore.SwaggerUI.dll
@@ -63,6 +66,7 @@ C:\Users\kan_w\source\repos\Api_BuildTech\Api_BuildTech\obj\Debug\net8.0\Api_Bui
 C:\Users\kan_w\source\repos\Api_BuildTech\Api_BuildTech\obj\Debug\net8.0\Api_BuildTech.csproj.CoreCompileInputs.cache
 C:\Users\kan_w\source\repos\Api_BuildTech\Api_BuildTech\obj\Debug\net8.0\Api_BuildTech.MvcApplicationPartsAssemblyInfo.cs
 C:\Users\kan_w\source\repos\Api_BuildTech\Api_BuildTech\obj\Debug\net8.0\Api_BuildTech.MvcApplicationPartsAssemblyInfo.cache
+C:\Users\kan_w\source\repos\Api_BuildTech\Api_BuildTech\obj\Debug\net8.0\Api_BuildTech.sourcelink.json
 C:\Users\kan_w\source\repos\Api_BuildTech\Api_BuildTech\obj\Debug\net8.0\rjimswa.dswa.cache.json
 C:\Users\kan_w\source\repos\Api_BuildTech\Api_BuildTech\obj\Debug\net8.0\rjsmrazor.dswa.cache.json
 C:\Users\kan_w\source\repos\Api_BuildTech\Api_BuildTech\obj\Debug\net8.0\rjsmcshtml.dswa.cache.json
@@ -78,6 +82,3 @@ C:\Users\kan_w\source\repos\Api_BuildTech\Api_BuildTech\obj\Debug\net8.0\refint\
 C:\Users\kan_w\source\repos\Api_BuildTech\Api_BuildTech\obj\Debug\net8.0\Api_BuildTech.pdb
 C:\Users\kan_w\source\repos\Api_BuildTech\Api_BuildTech\obj\Debug\net8.0\Api_BuildTech.genruntimeconfig.cache
 C:\Users\kan_w\source\repos\Api_BuildTech\Api_BuildTech\obj\Debug\net8.0\ref\Api_BuildTech.dll
-C:\Users\kan_w\source\repos\Api_BuildTech\Api_BuildTech\bin\Debug\net8.0\BouncyCastle.Cryptography.dll
-C:\Users\kan_w\source\repos\Api_BuildTech\Api_BuildTech\bin\Debug\net8.0\MailKit.dll
-C:\Users\kan_w\source\repos\Api_BuildTech\Api_BuildTech\bin\Debug\net8.0\MimeKit.dll

@@ -496,70 +496,70 @@ namespace Api_BuildTech.Controllers.Articles
         // GET STOCK ARTICLES
         // ========================================
 
-        public async Task<ArticleListResponse> GetStockArticlesAsync()
-        {
-            var result = new ArticleListResponse { Success = true };
+        //public async Task<ArticleListResponse> GetStockArticlesAsync()
+        //{
+        //    var result = new ArticleListResponse { Success = true };
 
-            try
-            {
-                using var conn = await GetConnectionAsync();
-                var whereClause = BuildWhereClause("a");
+        //    try
+        //    {
+        //        using var conn = await GetConnectionAsync();
+        //        var whereClause = BuildWhereClause("a");
 
-                using var cmd = new SqlCommand($@"
-                    SELECT 
-                        a.Id, a.CodeArticle, a.Designation, a.Description, a.CodeBarre,
-                        a.PrixAchat, a.PrixVente, a.PrixExterieur, a.EstPos, a.Position,
-                        a.EstExonerer, a.TypeRepas, a.Etat, a.DatePerenption,
-                        a.EstStockable, a.EstEnStock, a.EstEnPorter, a.IdEntreprise,
-                        a.IdCathegorie, a.IdType_Repas, a.PrixPromo, a.EstPromo,
-                        a.EstComposer, a.EstVendableSansComposition,
-                        a.AfficherStockPOS, a.TauxTva, a.Stock, a.SeuilAlerte,
-                        a.ImageURL, a.Statut,
-                        a.DateCreate, a.idCreateUser, a.DateLastUpdate, a.idLastUpdateUser,
-                        c.Designation AS NomCategorie,
-                        u1.Nom + ' ' + ISNULL(u1.Prenom, '') AS NomCreateUser,
-                        u2.Nom + ' ' + ISNULL(u2.Prenom, '') AS NomLastUpdateUser
-                    FROM ARTICLES a
-                    LEFT JOIN CATHEGORIE c ON a.IdCathegorie = c.Id
-                    LEFT JOIN UTILISATEURS u1 ON a.idCreateUser = u1.Id
-                    LEFT JOIN UTILISATEURS u2 ON a.idLastUpdateUser = u2.Id
-                    WHERE a.EstStockable = 1 
-                      AND ISNULL(a.Etat, 'Actif') != 'Supprimer' {whereClause}
-                    ORDER BY a.Designation", conn);
+        //        using var cmd = new SqlCommand($@"
+        //            SELECT 
+        //                a.Id, a.CodeArticle, a.Designation, a.Description, a.CodeBarre,
+        //                a.PrixAchat, a.PrixVente, a.PrixExterieur, a.EstPos, a.Position,
+        //                a.EstExonerer, a.TypeRepas, a.Etat, a.DatePerenption,
+        //                a.EstStockable, a.EstEnStock, a.EstEnPorter, a.IdEntreprise,
+        //                a.IdCathegorie, a.IdType_Repas, a.PrixPromo, a.EstPromo,
+        //                a.EstComposer, a.EstVendableSansComposition,
+        //                a.AfficherStockPOS, a.TauxTva, a.Stock, a.SeuilAlerte,
+        //                a.ImageURL, a.Statut,
+        //                a.DateCreate, a.idCreateUser, a.DateLastUpdate, a.idLastUpdateUser,
+        //                c.Designation AS NomCategorie,
+        //                u1.Nom + ' ' + ISNULL(u1.Prenom, '') AS NomCreateUser,
+        //                u2.Nom + ' ' + ISNULL(u2.Prenom, '') AS NomLastUpdateUser
+        //            FROM ARTICLES a
+        //            LEFT JOIN CATHEGORIE c ON a.IdCathegorie = c.Id
+        //            LEFT JOIN UTILISATEURS u1 ON a.idCreateUser = u1.Id
+        //            LEFT JOIN UTILISATEURS u2 ON a.idLastUpdateUser = u2.Id
+        //            WHERE a.EstStockable = 1 
+        //              AND ISNULL(a.Etat, 'Actif') != 'Supprimer' {whereClause}
+        //            ORDER BY a.Designation", conn);
 
-                AddEntrepriseParameter(cmd);
+        //        AddEntrepriseParameter(cmd);
 
-                using var reader = await cmd.ExecuteReaderAsync();
+        //        using var reader = await cmd.ExecuteReaderAsync();
 
-                while (await reader.ReadAsync())
-                {
-                    var article = MapArticleFromReader(reader);
-                    result.Articles.Add(article);
-                }
+        //        while (await reader.ReadAsync())
+        //        {
+        //            var article = MapArticleFromReader(reader);
+        //            result.Articles.Add(article);
+        //        }
 
-                result.Total = result.Articles.Count;
-                result.TotalStockables = result.Total;
+        //        result.Total = result.Articles.Count;
+        //        result.TotalStockables = result.Total;
 
-                // Calculer stock pour tous
-                foreach (var article in result.Articles)
-                {
-                    article.StockActuel = await CalculateStockActuelAsync(article.Id);
+        //        // Calculer stock pour tous
+        //        foreach (var article in result.Articles)
+        //        {
+        //            article.StockActuel = await CalculateStockActuelAsync(article.Id);
 
-                    if (article.SeuilAlerte.HasValue && article.StockActuel < article.SeuilAlerte.Value)
-                    {
-                        article.AlerteStock = true;
-                        result.TotalEnAlerte++;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erreur récupération articles stock");
-                result.Success = false;
-            }
+        //            if (article.SeuilAlerte.HasValue && article.StockActuel < article.SeuilAlerte.Value)
+        //            {
+        //                article.AlerteStock = true;
+        //                result.TotalEnAlerte++;
+        //            }
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Erreur récupération articles stock");
+        //        result.Success = false;
+        //    }
 
-            return result;
-        }
+        //    return result;
+        //}
 
 
         // ========================================
@@ -571,134 +571,134 @@ namespace Api_BuildTech.Controllers.Articles
         /// </summary>
         /// <param name="page">Numéro de page (1-based)</param>
         /// <param name="pageSize">Nombre d'éléments par page (max 100)</param>
-        public async Task<ArticleListResponse> GetStockArticlesAsync(int page = 1, int pageSize = 20)
-        {
-            var result = new ArticleListResponse { Success = true };
+        //public async Task<ArticleListResponse> GetStockArticlesAsync(int page = 1, int pageSize = 20)
+        //{
+        //    var result = new ArticleListResponse { Success = true };
 
-            try
-            {
-                // Validation pagination
-                if (page < 1) page = 1;
-                if (pageSize < 1) pageSize = 20;
-                if (pageSize > 100) pageSize = 100; // Limite max
+        //    try
+        //    {
+        //        // Validation pagination
+        //        if (page < 1) page = 1;
+        //        if (pageSize < 1) pageSize = 20;
+        //        if (pageSize > 100) pageSize = 100; // Limite max
 
-                using var conn = await GetConnectionAsync();
-                var whereClause = BuildWhereClause("a");
+        //        using var conn = await GetConnectionAsync();
+        //        var whereClause = BuildWhereClause("a");
 
-                // ========================================
-                // ÉTAPE 1 : Compter le total (sans pagination)
-                // ========================================
-                int totalRecords = 0;
-                using (var cmdCount = new SqlCommand($@"
-            SELECT COUNT(*)
-            FROM ARTICLES a
-            WHERE a.EstStockable = 1 
-              AND ISNULL(a.Etat, 'Actif') != 'Supprimer' {whereClause}", conn))
-                {
-                    AddEntrepriseParameter(cmdCount);
-                    totalRecords = (int)await cmdCount.ExecuteScalarAsync();
-                }
+        //        // ========================================
+        //        // ÉTAPE 1 : Compter le total (sans pagination)
+        //        // ========================================
+        //        int totalRecords = 0;
+        //        using (var cmdCount = new SqlCommand($@"
+        //    SELECT COUNT(*)
+        //    FROM ARTICLES a
+        //    WHERE a.EstStockable = 1 
+        //      AND ISNULL(a.Etat, 'Actif') != 'Supprimer' {whereClause}", conn))
+        //        {
+        //            AddEntrepriseParameter(cmdCount);
+        //            totalRecords = (int)await cmdCount.ExecuteScalarAsync();
+        //        }
 
-                // Si aucun résultat
-                if (totalRecords == 0)
-                {
-                    result.Total = 0;
-                    result.TotalStockables = 0;
-                    result.Pagination = new PaginationMetadata
-                    {
-                        CurrentPage = page,
-                        PageSize = pageSize,
-                        TotalPages = 0,
-                        TotalRecords = 0,
-                        HasPrevious = false,
-                        HasNext = false
-                    };
-                    return result;
-                }
+        //        // Si aucun résultat
+        //        if (totalRecords == 0)
+        //        {
+        //            result.Total = 0;
+        //            result.TotalStockables = 0;
+        //            result.Pagination = new PaginationMetadata
+        //            {
+        //                CurrentPage = page,
+        //                PageSize = pageSize,
+        //                TotalPages = 0,
+        //                TotalRecords = 0,
+        //                HasPrevious = false,
+        //                HasNext = false
+        //            };
+        //            return result;
+        //        }
 
-                // Calculer métadonnées pagination
-                int totalPages = (int)Math.Ceiling(totalRecords / (double)pageSize);
-                int offset = (page - 1) * pageSize;
+        //        // Calculer métadonnées pagination
+        //        int totalPages = (int)Math.Ceiling(totalRecords / (double)pageSize);
+        //        int offset = (page - 1) * pageSize;
 
-                // ========================================
-                // ÉTAPE 2 : Récupérer données paginées
-                // ========================================
-                using (var cmd = new SqlCommand($@"
-            SELECT 
-                a.Id, a.CodeArticle, a.Designation, a.Description, a.CodeBarre,
-                a.PrixAchat, a.PrixVente, a.PrixExterieur, a.EstPos, a.Position,
-                a.EstExonerer, a.TypeRepas, a.Etat, a.DatePerenption,
-                a.EstStockable, a.EstEnStock, a.EstEnPorter, a.IdEntreprise,
-                a.IdCathegorie, a.IdType_Repas, a.PrixPromo, a.EstPromo,
-                a.EstComposer, a.EstVendableSansComposition, a.IdStock,
-                a.AfficherStockPOS, a.TauxTva, a.StockInitial, a.SeuilAlerte,
-                a.ImageURL, a.Statut,
-                a.DateCreate, a.idCreateUser, a.DateLastUpdate, a.idLastUpdateUser,
-                c.Designation AS NomCategorie,
-                u1.Nom + ' ' + ISNULL(u1.Prenom, '') AS NomCreateUser,
-                u2.Nom + ' ' + ISNULL(u2.Prenom, '') AS NomLastUpdateUser
-            FROM ARTICLES a
-            LEFT JOIN CATEGORIES c ON a.IdCathegorie = c.Id
-            LEFT JOIN UTILISATEURS u1 ON a.idCreateUser = u1.Id
-            LEFT JOIN UTILISATEURS u2 ON a.idLastUpdateUser = u2.Id
-            WHERE a.EstStockable = 1 
-              AND ISNULL(a.Etat, 'Actif') != 'Supprimer' {whereClause}
-            ORDER BY a.Designation
-            OFFSET @Offset ROWS
-            FETCH NEXT @PageSize ROWS ONLY", conn))
-                {
-                    AddEntrepriseParameter(cmd);
-                    cmd.Parameters.AddWithValue("@Offset", offset);
-                    cmd.Parameters.AddWithValue("@PageSize", pageSize);
+        //        // ========================================
+        //        // ÉTAPE 2 : Récupérer données paginées
+        //        // ========================================
+        //        using (var cmd = new SqlCommand($@"
+        //    SELECT 
+        //        a.Id, a.CodeArticle, a.Designation, a.Description, a.CodeBarre,
+        //        a.PrixAchat, a.PrixVente, a.PrixExterieur, a.EstPos, a.Position,
+        //        a.EstExonerer, a.TypeRepas, a.Etat, a.DatePerenption,
+        //        a.EstStockable, a.EstEnStock, a.EstEnPorter, a.IdEntreprise,
+        //        a.IdCathegorie, a.IdType_Repas, a.PrixPromo, a.EstPromo,
+        //        a.EstComposer, a.EstVendableSansComposition, a.IdStock,
+        //        a.AfficherStockPOS, a.TauxTva, a.StockInitial, a.SeuilAlerte,
+        //        a.ImageURL, a.Statut,
+        //        a.DateCreate, a.idCreateUser, a.DateLastUpdate, a.idLastUpdateUser,
+        //        c.Designation AS NomCategorie,
+        //        u1.Nom + ' ' + ISNULL(u1.Prenom, '') AS NomCreateUser,
+        //        u2.Nom + ' ' + ISNULL(u2.Prenom, '') AS NomLastUpdateUser
+        //    FROM ARTICLES a
+        //    LEFT JOIN CATEGORIES c ON a.IdCathegorie = c.Id
+        //    LEFT JOIN UTILISATEURS u1 ON a.idCreateUser = u1.Id
+        //    LEFT JOIN UTILISATEURS u2 ON a.idLastUpdateUser = u2.Id
+        //    WHERE a.EstStockable = 1 
+        //      AND ISNULL(a.Etat, 'Actif') != 'Supprimer' {whereClause}
+        //    ORDER BY a.Designation
+        //    OFFSET @Offset ROWS
+        //    FETCH NEXT @PageSize ROWS ONLY", conn))
+        //        {
+        //            AddEntrepriseParameter(cmd);
+        //            cmd.Parameters.AddWithValue("@Offset", offset);
+        //            cmd.Parameters.AddWithValue("@PageSize", pageSize);
 
-                    using var reader = await cmd.ExecuteReaderAsync();
+        //            using var reader = await cmd.ExecuteReaderAsync();
 
-                    while (await reader.ReadAsync())
-                    {
-                        var article = MapArticleFromReader(reader);
-                        result.Articles.Add(article);
-                    }
-                }
+        //            while (await reader.ReadAsync())
+        //            {
+        //                var article = MapArticleFromReader(reader);
+        //                result.Articles.Add(article);
+        //            }
+        //        }
 
-                // ========================================
-                // ÉTAPE 3 : Calculer stock actuel
-                // ========================================
-                foreach (var article in result.Articles)
-                {
-                    article.StockActuel = await CalculateStockActuelAsync(article.Id);
+        //        // ========================================
+        //        // ÉTAPE 3 : Calculer stock actuel
+        //        // ========================================
+        //        foreach (var article in result.Articles)
+        //        {
+        //            article.StockActuel = await CalculateStockActuelAsync(article.Id);
 
-                    if (article.SeuilAlerte.HasValue && article.StockActuel < article.SeuilAlerte.Value)
-                    {
-                        article.AlerteStock = true;
-                        result.TotalEnAlerte++;
-                    }
-                }
+        //            if (article.SeuilAlerte.HasValue && article.StockActuel < article.SeuilAlerte.Value)
+        //            {
+        //                article.AlerteStock = true;
+        //                result.TotalEnAlerte++;
+        //            }
+        //        }
 
-                // ========================================
-                // ÉTAPE 4 : Construire métadonnées pagination
-                // ========================================
-                result.Total = totalRecords;
-                result.TotalStockables = totalRecords;
-                result.Pagination = new PaginationMetadata
-                {
-                    CurrentPage = page,
-                    PageSize = pageSize,
-                    TotalPages = totalPages,
-                    TotalRecords = totalRecords,
-                    HasPrevious = page > 1,
-                    HasNext = page < totalPages
-                };
+        //        // ========================================
+        //        // ÉTAPE 4 : Construire métadonnées pagination
+        //        // ========================================
+        //        result.Total = totalRecords;
+        //        result.TotalStockables = totalRecords;
+        //        result.Pagination = new PaginationMetadata
+        //        {
+        //            CurrentPage = page,
+        //            PageSize = pageSize,
+        //            TotalPages = totalPages,
+        //            TotalRecords = totalRecords,
+        //            HasPrevious = page > 1,
+        //            HasNext = page < totalPages
+        //        };
 
-                _logger.LogInformation($"✅ Articles stock récupérés: Page {page}/{totalPages}, {result.Articles.Count} articles");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erreur récupération articles stock");
-                result.Success = false;
-            }
+        //        _logger.LogInformation($"✅ Articles stock récupérés: Page {page}/{totalPages}, {result.Articles.Count} articles");
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Erreur récupération articles stock");
+        //        result.Success = false;
+        //    }
 
-            return result;
-        }
+        //    return result;
+        //}
 
 
 
@@ -947,295 +947,295 @@ namespace Api_BuildTech.Controllers.Articles
         /// <summary>
         /// Récupère les stocks depuis la vue V_STOCK_ARTICLES_ENTREPRISE avec pagination et filtres
         /// </summary>
-        public async Task<StockArticleListResponse> GetStockArticlesFromViewAsync(
-            StockArticleFilterRequest? filter = null,
-            int page = 1,
-            int pageSize = 20)
-        {
-            var result = new StockArticleListResponse { Success = true };
+        //public async Task<StockArticleListResponse> GetStockArticlesFromViewAsync(
+        //    StockArticleFilterRequest? filter = null,
+        //    int page = 1,
+        //    int pageSize = 20)
+        //{
+        //    var result = new StockArticleListResponse { Success = true };
 
-            try
-            {
-                // Validation pagination
-                if (page < 1) page = 1;
-                if (pageSize < 1) pageSize = 20;
-                if (pageSize > 100) pageSize = 100;
+        //    try
+        //    {
+        //        // Validation pagination
+        //        if (page < 1) page = 1;
+        //        if (pageSize < 1) pageSize = 20;
+        //        if (pageSize > 100) pageSize = 100;
 
-                filter ??= new StockArticleFilterRequest();
+        //        filter ??= new StockArticleFilterRequest();
 
-                using var conn = await GetConnectionAsync();
-                var whereClause = BuildWhereClause("v");
+        //        using var conn = await GetConnectionAsync();
+        //        var whereClause = BuildWhereClause("v");
 
-                // ========================================
-                // CONSTRUIRE FILTRES DYNAMIQUES
-                // ========================================
-                var additionalFilters = new List<string>();
-                var parameters = new Dictionary<string, object>();
+        //        // ========================================
+        //        // CONSTRUIRE FILTRES DYNAMIQUES
+        //        // ========================================
+        //        var additionalFilters = new List<string>();
+        //        var parameters = new Dictionary<string, object>();
 
-                // Filtre par statut
-                if (!string.IsNullOrEmpty(filter.StatutStock))
-                {
-                    additionalFilters.Add("v.StatutStock = @StatutStock");
-                    parameters["@StatutStock"] = filter.StatutStock;
-                }
+        //        // Filtre par statut
+        //        if (!string.IsNullOrEmpty(filter.StatutStock))
+        //        {
+        //            additionalFilters.Add("v.StatutStock = @StatutStock");
+        //            parameters["@StatutStock"] = filter.StatutStock;
+        //        }
 
-                // Filtre par catégorie
-                if (!string.IsNullOrEmpty(filter.DesignationCategorie))
-                {
-                    additionalFilters.Add("v.DesignationCategorie = @DesignationCategorie");
-                    parameters["@DesignationCategorie"] = filter.DesignationCategorie;
-                }
+        //        // Filtre par catégorie
+        //        if (!string.IsNullOrEmpty(filter.DesignationCategorie))
+        //        {
+        //            additionalFilters.Add("v.DesignationCategorie = @DesignationCategorie");
+        //            parameters["@DesignationCategorie"] = filter.DesignationCategorie;
+        //        }
 
-                // Recherche par désignation
-                if (!string.IsNullOrEmpty(filter.SearchTerm))
-                {
-                    additionalFilters.Add("v.DesignationArticle LIKE @SearchTerm");
-                    parameters["@SearchTerm"] = $"%{filter.SearchTerm}%";
-                }
+        //        // Recherche par désignation
+        //        if (!string.IsNullOrEmpty(filter.SearchTerm))
+        //        {
+        //            additionalFilters.Add("v.DesignationArticle LIKE @SearchTerm");
+        //            parameters["@SearchTerm"] = $"%{filter.SearchTerm}%";
+        //        }
 
-                // Filtre stock minimum
-                if (filter.StockMin.HasValue)
-                {
-                    additionalFilters.Add("v.StockActuel >= @StockMin");
-                    parameters["@StockMin"] = filter.StockMin.Value;
-                }
+        //        // Filtre stock minimum
+        //        if (filter.StockMin.HasValue)
+        //        {
+        //            additionalFilters.Add("v.StockActuel >= @StockMin");
+        //            parameters["@StockMin"] = filter.StockMin.Value;
+        //        }
 
-                // Filtre stock maximum
-                if (filter.StockMax.HasValue)
-                {
-                    additionalFilters.Add("v.StockActuel <= @StockMax");
-                    parameters["@StockMax"] = filter.StockMax.Value;
-                }
+        //        // Filtre stock maximum
+        //        if (filter.StockMax.HasValue)
+        //        {
+        //            additionalFilters.Add("v.StockActuel <= @StockMax");
+        //            parameters["@StockMax"] = filter.StockMax.Value;
+        //        }
 
-                // Afficher uniquement les alertes
-                if (filter.AlertesOnly == true)
-                {
-                    additionalFilters.Add("v.StatutStock IN ('Alerte', 'Rupture')");
-                }
+        //        // Afficher uniquement les alertes
+        //        if (filter.AlertesOnly == true)
+        //        {
+        //            additionalFilters.Add("v.StatutStock IN ('Alerte', 'Rupture')");
+        //        }
 
-                string additionalWhere = additionalFilters.Count > 0
-                    ? " AND " + string.Join(" AND ", additionalFilters)
-                    : "";
+        //        string additionalWhere = additionalFilters.Count > 0
+        //            ? " AND " + string.Join(" AND ", additionalFilters)
+        //            : "";
 
-                // ========================================
-                // CONSTRUIRE ORDER BY
-                // ========================================
-                string orderByClause = filter.OrderBy?.ToLower() switch
-                {
-                    "stock" => "v.StockActuel",
-                    "categorie" => "v.DesignationCategorie, v.DesignationArticle",
-                    "statut" => "v.StatutStock, v.StockActuel",
-                    _ => "v.DesignationArticle"
-                };
+        //        // ========================================
+        //        // CONSTRUIRE ORDER BY
+        //        // ========================================
+        //        string orderByClause = filter.OrderBy?.ToLower() switch
+        //        {
+        //            "stock" => "v.StockActuel",
+        //            "categorie" => "v.DesignationCategorie, v.DesignationArticle",
+        //            "statut" => "v.StatutStock, v.StockActuel",
+        //            _ => "v.DesignationArticle"
+        //        };
 
-                string orderDirection = filter.OrderDirection?.ToLower() == "desc" ? "DESC" : "ASC";
+        //        string orderDirection = filter.OrderDirection?.ToLower() == "desc" ? "DESC" : "ASC";
 
-                // ========================================
-                // ÉTAPE 1 : COMPTER LE TOTAL
-                // ========================================
-                int totalRecords = 0;
-                using (var cmdCount = new SqlCommand($@"
-            SELECT COUNT(*)
-            FROM V_STOCK_ARTICLES_ENTREPRISE v
-            WHERE 1=1 {whereClause} {additionalWhere}", conn))
-                {
-                    AddEntrepriseParameter(cmdCount);
-                    foreach (var param in parameters)
-                    {
-                        cmdCount.Parameters.AddWithValue(param.Key, param.Value);
-                    }
-                    totalRecords = (int)await cmdCount.ExecuteScalarAsync();
-                }
+        //        // ========================================
+        //        // ÉTAPE 1 : COMPTER LE TOTAL
+        //        // ========================================
+        //        int totalRecords = 0;
+        //        using (var cmdCount = new SqlCommand($@"
+        //    SELECT COUNT(*)
+        //    FROM V_STOCK_ARTICLES_ENTREPRISE v
+        //    WHERE 1=1 {whereClause} {additionalWhere}", conn))
+        //        {
+        //            AddEntrepriseParameter(cmdCount);
+        //            foreach (var param in parameters)
+        //            {
+        //                cmdCount.Parameters.AddWithValue(param.Key, param.Value);
+        //            }
+        //            totalRecords = (int)await cmdCount.ExecuteScalarAsync();
+        //        }
 
-                if (totalRecords == 0)
-                {
-                    result.Pagination = CreateEmptyPagination(page, pageSize);
-                    return result;
-                }
+        //        if (totalRecords == 0)
+        //        {
+        //            result.Pagination = CreateEmptyPagination(page, pageSize);
+        //            return result;
+        //        }
 
-                // Calculer pagination
-                int totalPages = (int)Math.Ceiling(totalRecords / (double)pageSize);
-                int offset = (page - 1) * pageSize;
+        //        // Calculer pagination
+        //        int totalPages = (int)Math.Ceiling(totalRecords / (double)pageSize);
+        //        int offset = (page - 1) * pageSize;
 
-                // ========================================
-                // ÉTAPE 2 : RÉCUPÉRER DONNÉES PAGINÉES
-                // ========================================
-                using (var cmd = new SqlCommand($@"
-            SELECT 
-                v.IdEntreprise,
-                v.IdArticle,
-                v.DesignationArticle,
-                v.DesignationCategorie,
-                v.StockActuel,
-                v.SeuilStock,
-                v.StatutStock
-            FROM V_STOCK_ARTICLES_ENTREPRISE v
-            WHERE 1=1 {whereClause} {additionalWhere}
-            ORDER BY {orderByClause} {orderDirection}
-            OFFSET @Offset ROWS
-            FETCH NEXT @PageSize ROWS ONLY", conn))
-                {
-                    AddEntrepriseParameter(cmd);
-                    foreach (var param in parameters)
-                    {
-                        cmd.Parameters.AddWithValue(param.Key, param.Value);
-                    }
-                    cmd.Parameters.AddWithValue("@Offset", offset);
-                    cmd.Parameters.AddWithValue("@PageSize", pageSize);
+        //        // ========================================
+        //        // ÉTAPE 2 : RÉCUPÉRER DONNÉES PAGINÉES
+        //        // ========================================
+        //        using (var cmd = new SqlCommand($@"
+        //    SELECT 
+        //        v.IdEntreprise,
+        //        v.IdArticle,
+        //        v.DesignationArticle,
+        //        v.DesignationCategorie,
+        //        v.StockActuel,
+        //        v.SeuilStock,
+        //        v.StatutStock
+        //    FROM V_STOCK_ARTICLES_ENTREPRISE v
+        //    WHERE 1=1 {whereClause} {additionalWhere}
+        //    ORDER BY {orderByClause} {orderDirection}
+        //    OFFSET @Offset ROWS
+        //    FETCH NEXT @PageSize ROWS ONLY", conn))
+        //        {
+        //            AddEntrepriseParameter(cmd);
+        //            foreach (var param in parameters)
+        //            {
+        //                cmd.Parameters.AddWithValue(param.Key, param.Value);
+        //            }
+        //            cmd.Parameters.AddWithValue("@Offset", offset);
+        //            cmd.Parameters.AddWithValue("@PageSize", pageSize);
 
-                    using var reader = await cmd.ExecuteReaderAsync();
+        //            using var reader = await cmd.ExecuteReaderAsync();
 
-                    while (await reader.ReadAsync())
-                    {
-                        var stock = new StockArticleViewDto
-                        {
-                            IdEntreprise = reader.GetGuid(0),
-                            IdArticle = reader.GetGuid(1),
-                            DesignationArticle = ReadNullableString(reader, "DesignationArticle"),
-                            DesignationCategorie = ReadNullableString(reader, "DesignationCategorie"),
-                            StockActuel = reader.GetDecimal(4),
-                            SeuilStock = reader.GetDecimal(5),
-                            StatutStock = ReadNullableString(reader, "StatutStock")
-                        };
+        //            while (await reader.ReadAsync())
+        //            {
+        //                var stock = new StockArticleViewDto
+        //                {
+        //                    IdEntreprise = reader.GetGuid(0),
+        //                    IdArticle = reader.GetGuid(1),
+        //                    DesignationArticle = ReadNullableString(reader, "DesignationArticle"),
+        //                    DesignationCategorie = ReadNullableString(reader, "DesignationCategorie"),
+        //                    StockActuel = reader.GetDecimal(4),
+        //                    SeuilStock = reader.GetDecimal(5),
+        //                    StatutStock = ReadNullableString(reader, "StatutStock")
+        //                };
 
-                        result.Stocks.Add(stock);
+        //                result.Stocks.Add(stock);
 
-                        // Compteurs par statut
-                        if (stock.StatutStock == "En stock")
-                            result.TotalEnStock++;
-                        else if (stock.StatutStock == "Alerte")
-                            result.TotalEnAlerte++;
-                        else if (stock.StatutStock == "Rupture")
-                            result.TotalEnRupture++;
-                    }
-                }
+        //                // Compteurs par statut
+        //                if (stock.StatutStock == "En stock")
+        //                    result.TotalEnStock++;
+        //                else if (stock.StatutStock == "Alerte")
+        //                    result.TotalEnAlerte++;
+        //                else if (stock.StatutStock == "Rupture")
+        //                    result.TotalEnRupture++;
+        //            }
+        //        }
 
-                // ========================================
-                // ÉTAPE 3 : CONSTRUIRE MÉTADONNÉES
-                // ========================================
-                result.Total = totalRecords;
-                result.Pagination = CreatePagination(page, pageSize, totalPages, totalRecords);
+        //        // ========================================
+        //        // ÉTAPE 3 : CONSTRUIRE MÉTADONNÉES
+        //        // ========================================
+        //        result.Total = totalRecords;
+        //        result.Pagination = CreatePagination(page, pageSize, totalPages, totalRecords);
 
-                _logger.LogInformation($"✅ Stocks récupérés: Page {page}/{totalPages}, {result.Stocks.Count} articles");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erreur récupération stocks depuis vue");
-                result.Success = false;
-            }
+        //        _logger.LogInformation($"✅ Stocks récupérés: Page {page}/{totalPages}, {result.Stocks.Count} articles");
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Erreur récupération stocks depuis vue");
+        //        result.Success = false;
+        //    }
 
-            return result;
-        }
+        //    return result;
+        //}
 
         /// <summary>
         /// Récupère les statistiques globales de stock
         /// </summary>
-        public async Task<StockStatisticsDto> GetStockStatisticsAsync()
-        {
-            var stats = new StockStatisticsDto();
+        // public async Task<StockStatisticsDto> GetStockStatisticsAsync()
+        // {
+        //     var stats = new StockStatisticsDto();
 
-            try
-            {
-                using var conn = await GetConnectionAsync();
-                var whereClause = BuildWhereClause("v");
+        //     try
+        //     {
+        //         using var conn = await GetConnectionAsync();
+        //         var whereClause = BuildWhereClause("v");
 
-                using var cmd = new SqlCommand($@"
-            SELECT 
-                COUNT(*) AS TotalArticles,
-                SUM(CASE WHEN StatutStock = 'En stock' THEN 1 ELSE 0 END) AS TotalEnStock,
-                SUM(CASE WHEN StatutStock = 'Alerte' THEN 1 ELSE 0 END) AS TotalEnAlerte,
-                SUM(CASE WHEN StatutStock = 'Rupture' THEN 1 ELSE 0 END) AS TotalEnRupture,
-                SUM(StockActuel) AS StockTotalUnites
-            FROM V_STOCK_ARTICLES_ENTREPRISE v
-            WHERE 1=1 {whereClause}", conn);
+        //         using var cmd = new SqlCommand($@"
+        //     SELECT 
+        //         COUNT(*) AS TotalArticles,
+        //         SUM(CASE WHEN StatutStock = 'En stock' THEN 1 ELSE 0 END) AS TotalEnStock,
+        //         SUM(CASE WHEN StatutStock = 'Alerte' THEN 1 ELSE 0 END) AS TotalEnAlerte,
+        //         SUM(CASE WHEN StatutStock = 'Rupture' THEN 1 ELSE 0 END) AS TotalEnRupture,
+        //         SUM(StockActuel) AS StockTotalUnites
+        //     FROM V_STOCK_ARTICLES_ENTREPRISE v
+        //     WHERE 1=1 {whereClause}", conn);
 
-                AddEntrepriseParameter(cmd);
+        //         AddEntrepriseParameter(cmd);
 
-                using (var reader = await cmd.ExecuteReaderAsync())
-                {
-                    if (await reader.ReadAsync())
-                    {
-                        stats.TotalArticles = reader.GetInt32(0);
-                        stats.TotalEnStock = reader.GetInt32(1);
-                        stats.TotalEnAlerte = reader.GetInt32(2);
-                        stats.TotalEnRupture = reader.GetInt32(3);
-                        stats.StockTotalUnites = reader.GetDecimal(4);
+        //         using (var reader = await cmd.ExecuteReaderAsync())
+        //         {
+        //             if (await reader.ReadAsync())
+        //             {
+        //                 stats.TotalArticles = reader.GetInt32(0);
+        //                 stats.TotalEnStock = reader.GetInt32(1);
+        //                 stats.TotalEnAlerte = reader.GetInt32(2);
+        //                 stats.TotalEnRupture = reader.GetInt32(3);
+        //                 stats.StockTotalUnites = reader.GetDecimal(4);
 
-                        // Calculer pourcentages
-                        if (stats.TotalArticles > 0)
-                        {
-                            stats.PourcentageEnStock = (stats.TotalEnStock / (decimal)stats.TotalArticles) * 100;
-                            stats.PourcentageEnAlerte = (stats.TotalEnAlerte / (decimal)stats.TotalArticles) * 100;
-                            stats.PourcentageEnRupture = (stats.TotalEnRupture / (decimal)stats.TotalArticles) * 100;
-                        }
-                    }
-                }
+        //                 // Calculer pourcentages
+        //                 if (stats.TotalArticles > 0)
+        //                 {
+        //                     stats.PourcentageEnStock = (stats.TotalEnStock / (decimal)stats.TotalArticles) * 100;
+        //                     stats.PourcentageEnAlerte = (stats.TotalEnAlerte / (decimal)stats.TotalArticles) * 100;
+        //                     stats.PourcentageEnRupture = (stats.TotalEnRupture / (decimal)stats.TotalArticles) * 100;
+        //                 }
+        //             }
+        //         }
 
-                // Récupérer Top 5 alertes
-                using (var cmdAlertes = new SqlCommand($@"
-            SELECT TOP 5
-                IdEntreprise, IdArticle, DesignationArticle, DesignationCategorie,
-                StockActuel, SeuilStock, StatutStock
-            FROM V_STOCK_ARTICLES_ENTREPRISE v
-            WHERE StatutStock = 'Alerte' {whereClause}
-            ORDER BY (StockActuel / NULLIF(SeuilStock, 0)) ASC", conn))
-                {
-                    AddEntrepriseParameter(cmdAlertes);
-                    using var reader = await cmdAlertes.ExecuteReaderAsync();
-                    while (await reader.ReadAsync())
-                    {
-                        stats.Top5Alertes.Add(new StockArticleViewDto
-                        {
-                            IdEntreprise = reader.GetGuid(0),
-                            IdArticle = reader.GetGuid(1),
-                            DesignationArticle = ReadNullableString(reader, "DesignationArticle"),
-                            DesignationCategorie = ReadNullableString(reader, "DesignationCategorie"),
-                            StockActuel = reader.GetDecimal(4),
-                            SeuilStock = reader.GetDecimal(5),
-                            StatutStock = ReadNullableString(reader, "StatutStock")
-                        });
-                    }
-                }
+        //         // Récupérer Top 5 alertes
+        //         using (var cmdAlertes = new SqlCommand($@"
+        //     SELECT TOP 5
+        //         IdEntreprise, IdArticle, DesignationArticle, DesignationCategorie,
+        //         StockActuel, SeuilStock, StatutStock
+        //     FROM V_STOCK_ARTICLES_ENTREPRISE v
+        //     WHERE StatutStock = 'Alerte' {whereClause}
+        //     ORDER BY (StockActuel / NULLIF(SeuilStock, 0)) ASC", conn))
+        //         {
+        //             AddEntrepriseParameter(cmdAlertes);
+        //             using var reader = await cmdAlertes.ExecuteReaderAsync();
+        //             while (await reader.ReadAsync())
+        //             {
+        //                 stats.Top5Alertes.Add(new StockArticleViewDto
+        //                 {
+        //                     IdEntreprise = reader.GetGuid(0),
+        //                     IdArticle = reader.GetGuid(1),
+        //                     DesignationArticle = ReadNullableString(reader, "DesignationArticle"),
+        //                     DesignationCategorie = ReadNullableString(reader, "DesignationCategorie"),
+        //                     StockActuel = reader.GetDecimal(4),
+        //                     SeuilStock = reader.GetDecimal(5),
+        //                     StatutStock = ReadNullableString(reader, "StatutStock")
+        //                 });
+        //             }
+        //         }
 
-                // Récupérer Top 5 ruptures
-                using (var cmdRuptures = new SqlCommand($@"
-            SELECT TOP 5
-                IdEntreprise, IdArticle, DesignationArticle, DesignationCategorie,
-                StockActuel, SeuilStock, StatutStock
-            FROM V_STOCK_ARTICLES_ENTREPRISE v
-            WHERE StatutStock = 'Rupture' {whereClause}
-            ORDER BY DesignationArticle", conn))
-                {
-                    AddEntrepriseParameter(cmdRuptures);
-                    using var reader = await cmdRuptures.ExecuteReaderAsync();
-                    while (await reader.ReadAsync())
-                    {
-                        stats.Top5Ruptures.Add(new StockArticleViewDto
-                        {
-                            IdEntreprise = reader.GetGuid(0),
-                            IdArticle = reader.GetGuid(1),
-                            DesignationArticle = ReadNullableString(reader, "DesignationArticle"),
-                            DesignationCategorie = ReadNullableString(reader, "DesignationCategorie"),
-                            StockActuel = reader.GetDecimal(4),
-                            SeuilStock = reader.GetDecimal(5),
-                            StatutStock = ReadNullableString(reader, "StatutStock")
-                        });
-                    }
-                }
+        //         // Récupérer Top 5 ruptures
+        //         using (var cmdRuptures = new SqlCommand($@"
+        //     SELECT TOP 5
+        //         IdEntreprise, IdArticle, DesignationArticle, DesignationCategorie,
+        //         StockActuel, SeuilStock, StatutStock
+        //     FROM V_STOCK_ARTICLES_ENTREPRISE v
+        //     WHERE StatutStock = 'Rupture' {whereClause}
+        //     ORDER BY DesignationArticle", conn))
+        //         {
+        //             AddEntrepriseParameter(cmdRuptures);
+        //             using var reader = await cmdRuptures.ExecuteReaderAsync();
+        //             while (await reader.ReadAsync())
+        //             {
+        //                 stats.Top5Ruptures.Add(new StockArticleViewDto
+        //                 {
+        //                     IdEntreprise = reader.GetGuid(0),
+        //                     IdArticle = reader.GetGuid(1),
+        //                     DesignationArticle = ReadNullableString(reader, "DesignationArticle"),
+        //                     DesignationCategorie = ReadNullableString(reader, "DesignationCategorie"),
+        //                     StockActuel = reader.GetDecimal(4),
+        //                     SeuilStock = reader.GetDecimal(5),
+        //                     StatutStock = ReadNullableString(reader, "StatutStock")
+        //                 });
+        //             }
+        //         }
 
-                _logger.LogInformation($"✅ Statistiques stock: {stats.TotalArticles} articles, {stats.TotalEnAlerte} alertes, {stats.TotalEnRupture} ruptures");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erreur récupération statistiques stock");
-            }
+        //         _logger.LogInformation($"✅ Statistiques stock: {stats.TotalArticles} articles, {stats.TotalEnAlerte} alertes, {stats.TotalEnRupture} ruptures");
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         _logger.LogError(ex, "Erreur récupération statistiques stock");
+        //     }
 
-            return stats;
-        }
+        //     return stats;
+        // }
 
-        // ========================================
-        // HELPER : MAP ARTICLE FROM READER
-        // ========================================
+        // // ========================================
+        // // HELPER : MAP ARTICLE FROM READER
+        // // ========================================
 
         private ArticleDto MapArticleFromReader(SqlDataReader reader)
         {
@@ -1283,31 +1283,31 @@ namespace Api_BuildTech.Controllers.Articles
             };
         }
 
-        private PaginationMetadata CreatePagination(
-       int currentPage, int pageSize, int totalPages, int totalRecords)
-        {
-            return new PaginationMetadata
-            {
-                CurrentPage = currentPage,
-                PageSize = pageSize,
-                TotalPages = totalPages,
-                TotalRecords = totalRecords,
-                HasPrevious = currentPage > 1,
-                HasNext = currentPage < totalPages
-            };
-        }
+        // private PaginationMetadata CreatePagination(
+        //int currentPage, int pageSize, int totalPages, int totalRecords)
+        // {
+        //     return new PaginationMetadata
+        //     {
+        //         CurrentPage = currentPage,
+        //         PageSize = pageSize,
+        //         TotalPages = totalPages,
+        //         TotalRecords = totalRecords,
+        //         HasPrevious = currentPage > 1,
+        //         HasNext = currentPage < totalPages
+        //     };
+        // }
 
-        private PaginationMetadata CreateEmptyPagination(int page, int pageSize)
-        {
-            return new PaginationMetadata
-            {
-                CurrentPage = page,
-                PageSize = pageSize,
-                TotalPages = 0,
-                TotalRecords = 0,
-                HasPrevious = false,
-                HasNext = false
-            };
-        }
+        // private PaginationMetadata CreateEmptyPagination(int page, int pageSize)
+        // {
+        //     return new PaginationMetadata
+        //     {
+        //         CurrentPage = page,
+        //         PageSize = pageSize,
+        //         TotalPages = 0,
+        //         TotalRecords = 0,
+        //         HasPrevious = false,
+        //         HasNext = false
+        //     };
+        // }
     }
 }
