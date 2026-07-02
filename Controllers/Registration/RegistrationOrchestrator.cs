@@ -356,7 +356,7 @@ namespace Api_BuildTech.Controllers.Registration
                 VALUES (
                     @Id, @Designation,@Email, @Contact, @Localisation,
                     @Pays, @Ville, @Commune, @CodeEntreprise, @IdOrganisation,
-                    1, 1, 'Active', @CreatedAt
+                    0, 0, 'Active', @CreatedAt
                 )", conn, transaction);
 
             cmd.Parameters.AddWithValue("@Id", newId);

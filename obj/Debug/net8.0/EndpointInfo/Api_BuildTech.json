@@ -2,7 +2,7 @@
   "openapi": "3.0.1",
   "info": {
     "title": "TSALACH API",
-    "description": "API de gestion de restaurant multi-tenant",
+    "description": "API de gestion de restaurant multi-tenant avec POS intégré",
     "version": "v1"
   },
   "paths": {
@@ -3769,6 +3769,432 @@
         }
       }
     },
+    "/api/Pos/factures": {
+      "post": {
+        "tags": [
+          "Pos"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePosFactureRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePosFactureRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePosFactureRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Pos/factures/{id}": {
+      "get": {
+        "tags": [
+          "Pos"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Pos/factures/{idFacture}/details": {
+      "post": {
+        "tags": [
+          "Pos"
+        ],
+        "parameters": [
+          {
+            "name": "idFacture",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddPosDetailRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddPosDetailRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddPosDetailRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Pos/put-on-hold": {
+      "put": {
+        "tags": [
+          "Pos"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutOnHoldSmartRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutOnHoldSmartRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutOnHoldSmartRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Pos/factures/{idFacture}/put-on-hold": {
+      "put": {
+        "tags": [
+          "Pos"
+        ],
+        "parameters": [
+          {
+            "name": "idFacture",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutPosOnHoldRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutPosOnHoldRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutPosOnHoldRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Pos/factures/en-attente": {
+      "get": {
+        "tags": [
+          "Pos"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Pos/factures/{idFacture}/resume": {
+      "put": {
+        "tags": [
+          "Pos"
+        ],
+        "parameters": [
+          {
+            "name": "idFacture",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Pos/factures/{idFacture}/cancel": {
+      "put": {
+        "tags": [
+          "Pos"
+        ],
+        "parameters": [
+          {
+            "name": "idFacture",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelPosFactureRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelPosFactureRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelPosFactureRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Pos/payment-types": {
+      "get": {
+        "tags": [
+          "Pos"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Pos/confirm-payment": {
+      "post": {
+        "tags": [
+          "Pos"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmPosPaymentRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmPosPaymentRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmPosPaymentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Pos/statistiques/jour": {
+      "get": {
+        "tags": [
+          "Pos"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Pos/rapports/ventes": {
+      "get": {
+        "tags": [
+          "Pos"
+        ],
+        "parameters": [
+          {
+            "name": "dateDebut",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "dateFin",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "downloadPDF",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Pos/rapports/ventes-quantite": {
+      "get": {
+        "tags": [
+          "Pos"
+        ],
+        "parameters": [
+          {
+            "name": "dateDebut",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "dateFin",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "downloadPDF",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Pos/rapports/stock": {
+      "get": {
+        "tags": [
+          "Pos"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "downloadPDF",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/Registration/register": {
       "post": {
         "tags": [
@@ -4139,6 +4565,110 @@
             }
           }
         },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Statistics/dashboard": {
+      "get": {
+        "tags": [
+          "Statistics"
+        ],
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "default": "7days"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Statistics/activity": {
+      "get": {
+        "tags": [
+          "Statistics"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Statistics/sales": {
+      "get": {
+        "tags": [
+          "Statistics"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Statistics/revenue": {
+      "get": {
+        "tags": [
+          "Statistics"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Statistics/customers": {
+      "get": {
+        "tags": [
+          "Statistics"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Statistics/inventory": {
+      "get": {
+        "tags": [
+          "Statistics"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Statistics/chart": {
+      "get": {
+        "tags": [
+          "Statistics"
+        ],
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "default": "7days"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK"
@@ -5176,6 +5706,58 @@
   },
   "components": {
     "schemas": {
+      "AddPosDetailRequest": {
+        "type": "object",
+        "properties": {
+          "idArticle": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "designation": {
+            "type": "string",
+            "nullable": true
+          },
+          "quantite": {
+            "type": "number",
+            "format": "double"
+          },
+          "prixUnitaireHT": {
+            "type": "number",
+            "format": "double"
+          },
+          "prixVente": {
+            "type": "number",
+            "format": "double"
+          },
+          "tauxTVA": {
+            "type": "number",
+            "format": "double"
+          },
+          "valeurRemise": {
+            "type": "number",
+            "format": "double"
+          },
+          "specificite": {
+            "type": "string",
+            "nullable": true
+          },
+          "detailComposent": {
+            "type": "string",
+            "nullable": true
+          },
+          "idServeur": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "idCuisinier": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "AffecterServeurRequest": {
         "type": "object",
         "properties": {
@@ -5190,12 +5772,105 @@
         },
         "additionalProperties": false
       },
+      "CancelPosFactureRequest": {
+        "type": "object",
+        "properties": {
+          "idFacture": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "motif": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "ClotureSessionRequest": {
         "type": "object",
         "properties": {
           "dateFin": {
             "type": "string",
             "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ConfirmPosPaymentRequest": {
+        "type": "object",
+        "properties": {
+          "idFacture": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "idPayement": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "montantVerser": {
+            "type": "number",
+            "format": "double"
+          },
+          "monnaieRemis": {
+            "type": "number",
+            "format": "double"
+          },
+          "remise": {
+            "type": "number",
+            "format": "double"
+          },
+          "numeroFacture": {
+            "type": "string",
+            "nullable": true
+          },
+          "designation": {
+            "type": "string",
+            "nullable": true
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          },
+          "idTable": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "idClient": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "idUtilisateur": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "idEntreprise": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "idSession": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "caisse": {
+            "type": "string",
+            "nullable": true
+          },
+          "serveur": {
+            "type": "string",
+            "nullable": true
+          },
+          "articles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AddPosDetailRequest"
+            },
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -5932,6 +6607,56 @@
         },
         "additionalProperties": false
       },
+      "CreatePosFactureRequest": {
+        "type": "object",
+        "properties": {
+          "numeroFacture": {
+            "type": "string",
+            "nullable": true
+          },
+          "designation": {
+            "type": "string",
+            "nullable": true
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          },
+          "idTable": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "idClient": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "idUtilisateur": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "idEntreprise": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "idSession": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "caisse": {
+            "type": "string",
+            "nullable": true
+          },
+          "serveur": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "CreateServeurRequest": {
         "type": "object",
         "properties": {
@@ -6110,6 +6835,87 @@
             "type": "boolean"
           },
           "errorMessage": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "PutOnHoldSmartRequest": {
+        "type": "object",
+        "properties": {
+          "idFacture": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "motif": {
+            "type": "string",
+            "nullable": true
+          },
+          "numeroFacture": {
+            "type": "string",
+            "nullable": true
+          },
+          "designation": {
+            "type": "string",
+            "nullable": true
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          },
+          "idTable": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "idClient": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "idUtilisateur": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "idEntreprise": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "idSession": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "caisse": {
+            "type": "string",
+            "nullable": true
+          },
+          "serveur": {
+            "type": "string",
+            "nullable": true
+          },
+          "articles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AddPosDetailRequest"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "PutPosOnHoldRequest": {
+        "type": "object",
+        "properties": {
+          "idFacture": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "motif": {
             "type": "string",
             "nullable": true
           }

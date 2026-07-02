@@ -1,63 +1,95 @@
-﻿using Api_BuildTech.Controllers.ArticleStock;
-using Api_BuildTech.Controllers.Articles;
-using Api_BuildTech.Controllers.Authentication;
-using Api_BuildTech.Controllers.AutresMagasin;
-using Api_BuildTech.Controllers.Categorie;
-using Api_BuildTech.Controllers.CategorieComposants;
-using Api_BuildTech.Controllers.Clients;
-using Api_BuildTech.Controllers.Composants;
-using Api_BuildTech.Controllers.CompositionArticle;
-using Api_BuildTech.Controllers.DetailLivraisons;
-using Api_BuildTech.Controllers.DetailTransactions;
-using Api_BuildTech.Controllers.DomaineRestaurant;
-using Api_BuildTech.Controllers.Entreprise;
-using Api_BuildTech.Controllers.Factures;
-using Api_BuildTech.Controllers.Fournisseurs;
-using Api_BuildTech.Controllers.Livraisons;
-using Api_BuildTech.Controllers.Livreur;
-using Api_BuildTech.Controllers.MatierePremiere;
-using Api_BuildTech.Controllers.ModelRecu;
-using Api_BuildTech.Controllers.MouvementStock;
-using Api_BuildTech.Controllers.Organisation;
-using Api_BuildTech.Controllers.Otp;
-using Api_BuildTech.Controllers.Paiments;
-using Api_BuildTech.Controllers.ParametrePos;
-using Api_BuildTech.Controllers.Plans;
-using Api_BuildTech.Controllers.Registration;
-using Api_BuildTech.Controllers.Serveur;
-using Api_BuildTech.Controllers.Sessions;
-using Api_BuildTech.Controllers.Subscription;
-using Api_BuildTech.Controllers.Synchronisation;
-using Api_BuildTech.Controllers.Table;
-using Api_BuildTech.Controllers.TypePaiement;
-using Api_BuildTech.Controllers.TypeServices;
-using Api_BuildTech.Controllers.UniteMesures;
-using Api_BuildTech.Controllers.Users;
-using Api_BuildTech.Services;
-using Api_BuildTech.Services.messagerie;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
 
+// Services de base
+using Api_BuildTech.Services;
+using Api_BuildTech.Services.messagerie;
+
+// Controllers - Articles & Stock
+using Api_BuildTech.Controllers.Articles;
+using Api_BuildTech.Controllers.ArticleStock;
+using Api_BuildTech.Controllers.Categorie;
+
+// Controllers - Gestion Métier
+using Api_BuildTech.Controllers.Clients;
+using Api_BuildTech.Controllers.Fournisseurs;
+using Api_BuildTech.Controllers.Organisation;
+using Api_BuildTech.Controllers.Entreprise;
+using Api_BuildTech.Controllers.Users;
+
+// Controllers - Restaurant & Tables
+using Api_BuildTech.Controllers.Table;
+using Api_BuildTech.Controllers.Serveur;
+using Api_BuildTech.Controllers.Sessions;
+using Api_BuildTech.Controllers.DomaineRestaurant;
+
+// Controllers - Configuration
+using Api_BuildTech.Controllers.TypeServices;
+using Api_BuildTech.Controllers.TypePaiement;
+using Api_BuildTech.Controllers.UniteMesures;
+using Api_BuildTech.Controllers.ParametrePos;
+using Api_BuildTech.Controllers.ModelRecu;
+
+// Controllers - Factures & Transactions
+using Api_BuildTech.Controllers.Factures;
+using Api_BuildTech.Controllers.DetailTransactions;
+using Api_BuildTech.Controllers.Paiments;
+using Api_BuildTech.Controllers.POS;
+
+// Controllers - Articles & Composants
+using Api_BuildTech.Controllers.Composants;
+using Api_BuildTech.Controllers.CategorieComposants;
+using Api_BuildTech.Controllers.CompositionArticle;
+
+// Controllers - Stock & Matières Premières
+using Api_BuildTech.Controllers.MatierePremiere;
+using Api_BuildTech.Controllers.MouvementStock;
+using Api_BuildTech.Controllers.AutresMagasin;
+
+// Controllers - Livraison
+using Api_BuildTech.Controllers.Livreur;
+using Api_BuildTech.Controllers.Livraisons;
+using Api_BuildTech.Controllers.DetailLivraisons;
+
+// Controllers - Authentification & Registration
+using Api_BuildTech.Controllers.Authentication;
+using Api_BuildTech.Controllers.Registration;
+using Api_BuildTech.Controllers.Otp;
+using Api_BuildTech.Controllers.Subscription;
+using Api_BuildTech.Controllers.Plans;
+using Api_BuildTech.Controllers.Synchronisation;
+using Api_BuildTech.Controllers.Statistics;
+
+// ============================================================================
+// CONSTRUCTION DE L'APPLICATION
+// ============================================================================
+
 var builder = WebApplication.CreateBuilder(args);
 
 // ============================================================================
-// CONFIGURATION DE BASE
+// 1. CONFIGURATION DE BASE
 // ============================================================================
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddHttpContextAccessor();
+
+// ============================================================================
+// 2. SWAGGER CONFIGURATION
+// ============================================================================
+
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo
     {
         Title = "TSALACH API",
         Version = "v1",
-        Description = "API de gestion de restaurant multi-tenant"
+        Description = "API de gestion de restaurant multi-tenant avec POS intégré"
     });
 
-    // ✅ Ajouter le support JWT dans Swagger
+    // Support JWT dans Swagger
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
@@ -81,10 +113,10 @@ builder.Services.AddSwaggerGen(c =>
             Array.Empty<string>()
         }
     });
-}); builder.Services.AddHttpContextAccessor();
+});
 
 // ============================================================================
-// CONFIGURATION CORS
+// 3. CONFIGURATION CORS
 // ============================================================================
 
 builder.Services.AddCors(options =>
@@ -98,14 +130,12 @@ builder.Services.AddCors(options =>
 });
 
 // ============================================================================
-// CONFIGURATION JWT AUTHENTICATION
+// 4. CONFIGURATION JWT AUTHENTICATION
 // ============================================================================
 
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 var secretKey = jwtSettings["SecretKey"]
     ?? throw new InvalidOperationException("JWT SecretKey manquante dans appsettings.json");
-var issuer = jwtSettings["Issuer"] ?? "TSALACH";
-var audience = jwtSettings["Audience"] ?? "TSALACH-API";
 
 builder.Services.AddAuthentication(options =>
 {
@@ -130,26 +160,17 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization();
 
 // ============================================================================
-// CONNECTION STRING
+// 5. CONNECTION STRING
 // ============================================================================
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("ConnectionString 'DefaultConnection' non trouvée dans appsettings.json");
 
 // ============================================================================
-// INJECTION DE DÉPENDANCES - SERVICES DE BASE
+// 6. INJECTION DE DÉPENDANCES - SERVICES DE BASE
 // ============================================================================
 
-// Service email
-builder.Services.AddScoped<SmtpEmailService>();
-builder.Services.AddScoped<OtpService>(sp =>
-    new OtpService(
-        connectionString,
-        sp.GetRequiredService<ILogger<OtpService>>(),
-        sp.GetRequiredService<SmtpEmailService>(),
-        sp.GetRequiredService<IConfiguration>()
-    ));
-// Service de base pour accès database
+// Services essentiels
 builder.Services.AddScoped<DatabaseService>(sp =>
     new DatabaseService(
         connectionString,
@@ -157,7 +178,16 @@ builder.Services.AddScoped<DatabaseService>(sp =>
         sp.GetRequiredService<IHttpContextAccessor>()
     ));
 
-// Service d'authentification
+builder.Services.AddScoped<SmtpEmailService>();
+
+builder.Services.AddScoped<OtpService>(sp =>
+    new OtpService(
+        connectionString,
+        sp.GetRequiredService<ILogger<OtpService>>(),
+        sp.GetRequiredService<SmtpEmailService>(),
+        sp.GetRequiredService<IConfiguration>()
+    ));
+
 builder.Services.AddScoped<AuthService>(sp =>
     new AuthService(
         connectionString,
@@ -166,14 +196,12 @@ builder.Services.AddScoped<AuthService>(sp =>
         sp.GetRequiredService<IConfiguration>()
     ));
 
-// Service de synchronisation
 builder.Services.AddScoped<SyncService>(sp =>
     new SyncService(
         connectionString,
         sp.GetRequiredService<ILogger<SyncService>>()
     ));
 
-// Service d'abonnement/subscription
 builder.Services.AddScoped<SubscriptionService>(sp =>
     new SubscriptionService(
         connectionString,
@@ -183,23 +211,15 @@ builder.Services.AddScoped<SubscriptionService>(sp =>
     ));
 
 // ============================================================================
-// INJECTION DE DÉPENDANCES - GESTION ENTREPRISE & UTILISATEURS
+// 7. INJECTION DE DÉPENDANCES - GESTION ENTREPRISE & UTILISATEURS
 // ============================================================================
 
-// OrganisationService
 builder.Services.AddScoped<OrganisationService>(sp =>
-{
-    var logger = sp.GetRequiredService<ILogger<OrganisationService>>();
-    var httpContextAccessor = sp.GetRequiredService<IHttpContextAccessor>();
-
-    return new OrganisationService(
+    new OrganisationService(
         connectionString,
-        logger,
-        httpContextAccessor
-    );
-});
-
-// 2. EntrepriseService
+        sp.GetRequiredService<ILogger<OrganisationService>>(),
+        sp.GetRequiredService<IHttpContextAccessor>()
+    ));
 
 builder.Services.AddScoped<EntrepriseService>(sp =>
     new EntrepriseService(
@@ -216,7 +236,7 @@ builder.Services.AddScoped<UsersService>(sp =>
     ));
 
 // ============================================================================
-// INJECTION DE DÉPENDANCES - GESTION ARTICLES & CATÉGORIES
+// 8. INJECTION DE DÉPENDANCES - GESTION ARTICLES & CATÉGORIES
 // ============================================================================
 
 builder.Services.AddScoped<CategorieService>(sp =>
@@ -233,8 +253,15 @@ builder.Services.AddScoped<ArticlesService>(sp =>
         sp.GetRequiredService<IHttpContextAccessor>()
     ));
 
+builder.Services.AddScoped<ArticleStockService>(sp =>
+    new ArticleStockService(
+        connectionString,
+        sp.GetRequiredService<ILogger<ArticleStockService>>(),
+        sp.GetRequiredService<IHttpContextAccessor>()
+    ));
+
 // ============================================================================
-// INJECTION DE DÉPENDANCES - GESTION CLIENTS & FOURNISSEURS
+// 9. INJECTION DE DÉPENDANCES - GESTION CLIENTS & FOURNISSEURS
 // ============================================================================
 
 builder.Services.AddScoped<ClientsService>(sp =>
@@ -252,7 +279,7 @@ builder.Services.AddScoped<FournisseursService>(sp =>
     ));
 
 // ============================================================================
-// INJECTION DE DÉPENDANCES - FACTURES & TABLES
+// 10. INJECTION DE DÉPENDANCES - FACTURES & TABLES
 // ============================================================================
 
 builder.Services.AddScoped<FactureService>(sp =>
@@ -270,10 +297,9 @@ builder.Services.AddScoped<TableService>(sp =>
     ));
 
 // ============================================================================
-// INJECTION DE DÉPENDANCES - GROUPE 1 : CONFIGURATION
+// 11. INJECTION DE DÉPENDANCES - CONFIGURATION & PARAMÈTRES
 // ============================================================================
 
-// TYPE_SERVICES
 builder.Services.AddScoped<TypeServicesService>(sp =>
     new TypeServicesService(
         connectionString,
@@ -281,7 +307,6 @@ builder.Services.AddScoped<TypeServicesService>(sp =>
         sp.GetRequiredService<IHttpContextAccessor>()
     ));
 
-// TYPE_PAIEMENT
 builder.Services.AddScoped<TypePaiementService>(sp =>
     new TypePaiementService(
         connectionString,
@@ -289,7 +314,6 @@ builder.Services.AddScoped<TypePaiementService>(sp =>
         sp.GetRequiredService<IHttpContextAccessor>()
     ));
 
-// UNITE_MESURES
 builder.Services.AddScoped<UniteMesuresService>(sp =>
     new UniteMesuresService(
         connectionString,
@@ -297,11 +321,6 @@ builder.Services.AddScoped<UniteMesuresService>(sp =>
         sp.GetRequiredService<IHttpContextAccessor>()
     ));
 
-// ============================================================================
-// INJECTION DE DÉPENDANCES - GROUPE 2 : CONFIGURATION SUITE
-// ============================================================================
-
-// PARAMETRE_POS
 builder.Services.AddScoped<ParametrePosService>(sp =>
     new ParametrePosService(
         connectionString,
@@ -309,7 +328,6 @@ builder.Services.AddScoped<ParametrePosService>(sp =>
         sp.GetRequiredService<IHttpContextAccessor>()
     ));
 
-// MODEL_RECU
 builder.Services.AddScoped<ModelRecuService>(sp =>
     new ModelRecuService(
         connectionString,
@@ -318,10 +336,9 @@ builder.Services.AddScoped<ModelRecuService>(sp =>
     ));
 
 // ============================================================================
-// INJECTION DE DÉPENDANCES - GROUPE 3 : RESTAURANT ESSENTIELS
+// 12. INJECTION DE DÉPENDANCES - RESTAURANT ESSENTIELS
 // ============================================================================
 
-// DOMAINE_RESTAURANT
 builder.Services.AddScoped<DomaineRestaurantService>(sp =>
     new DomaineRestaurantService(
         connectionString,
@@ -329,7 +346,6 @@ builder.Services.AddScoped<DomaineRestaurantService>(sp =>
         sp.GetRequiredService<IHttpContextAccessor>()
     ));
 
-// SERVEUR
 builder.Services.AddScoped<ServeurService>(sp =>
     new ServeurService(
         connectionString,
@@ -337,7 +353,6 @@ builder.Services.AddScoped<ServeurService>(sp =>
         sp.GetRequiredService<IHttpContextAccessor>()
     ));
 
-// SESSIONS
 builder.Services.AddScoped<SessionsService>(sp =>
     new SessionsService(
         connectionString,
@@ -346,10 +361,9 @@ builder.Services.AddScoped<SessionsService>(sp =>
     ));
 
 // ============================================================================
-// INJECTION DE DÉPENDANCES - GROUPE 4 : TRANSACTIONS CRITIQUES
+// 13. INJECTION DE DÉPENDANCES - TRANSACTIONS CRITIQUES
 // ============================================================================
 
-// DETAIL_TRANSACTIONS
 builder.Services.AddScoped<DetailTransactionsService>(sp =>
     new DetailTransactionsService(
         connectionString,
@@ -357,7 +371,6 @@ builder.Services.AddScoped<DetailTransactionsService>(sp =>
         sp.GetRequiredService<IHttpContextAccessor>()
     ));
 
-// PAIMENTS
 builder.Services.AddScoped<PaimentsService>(sp =>
     new PaimentsService(
         connectionString,
@@ -366,10 +379,9 @@ builder.Services.AddScoped<PaimentsService>(sp =>
     ));
 
 // ============================================================================
-// INJECTION DE DÉPENDANCES - GROUPE 5 : STRUCTURE ARTICLES
+// 14. INJECTION DE DÉPENDANCES - ARTICLES & COMPOSANTS
 // ============================================================================
 
-// CATHEGORIE_COMPOSENTS
 builder.Services.AddScoped<CategorieComposantsService>(sp =>
     new CategorieComposantsService(
         connectionString,
@@ -377,63 +389,12 @@ builder.Services.AddScoped<CategorieComposantsService>(sp =>
         sp.GetRequiredService<IHttpContextAccessor>()
     ));
 
-// COMPOSANTS
 builder.Services.AddScoped<ComposantsService>(sp =>
     new ComposantsService(
         connectionString,
         sp.GetRequiredService<ILogger<ComposantsService>>(),
         sp.GetRequiredService<IHttpContextAccessor>()
     ));
-
-// ============================================================================
-// INJECTION DE DÉPENDANCES - GROUPE 6 : SYSTÈME LIVRAISON
-// ============================================================================
-
-// LIVREUR
-builder.Services.AddScoped<LivreurService>(sp =>
-    new LivreurService(
-        connectionString,
-        sp.GetRequiredService<ILogger<LivreurService>>(),
-        sp.GetRequiredService<IHttpContextAccessor>()
-    ));
-
-// LIVRAISONS
-builder.Services.AddScoped<LivraisonsService>(sp =>
-    new LivraisonsService(
-        connectionString,
-        sp.GetRequiredService<ILogger<LivraisonsService>>(),
-        sp.GetRequiredService<IHttpContextAccessor>()
-    ));
-
-// DETAIL_LIVRAISONS
-builder.Services.AddScoped<DetailLivraisonsService>(sp =>
-    new DetailLivraisonsService(
-        connectionString,
-        sp.GetRequiredService<ILogger<DetailLivraisonsService>>(),
-        sp.GetRequiredService<IHttpContextAccessor>()
-    ));
-
-// ============================================================================
-// INJECTION DE DÉPENDANCES - GROUPE 7 : STOCK & MATIÈRES PREMIÈRES
-// ============================================================================
-
-// MATIERE_PREMIERE
-builder.Services.AddScoped<MatierePremiereService>(sp =>
-    new MatierePremiereService(
-        connectionString,
-        sp.GetRequiredService<ILogger<MatierePremiereService>>(),
-        sp.GetRequiredService<IHttpContextAccessor>()
-    ));
-
-// VU STOCK + ARTICLE 
-builder.Services.AddScoped<ArticleStockService>(sp =>
-    new ArticleStockService(
-        connectionString,
-        sp.GetRequiredService<ILogger<ArticleStockService>>(),
-        sp.GetRequiredService<IHttpContextAccessor>()
-    ));
-
-// COMPOSITION_ARTICLE
 
 builder.Services.AddScoped<CompositionArticleService>(sp =>
     new CompositionArticleService(
@@ -442,7 +403,17 @@ builder.Services.AddScoped<CompositionArticleService>(sp =>
         sp.GetRequiredService<IHttpContextAccessor>()
     ));
 
-// MOUVEMENT_STOCK
+// ============================================================================
+// 15. INJECTION DE DÉPENDANCES - STOCK & MATIÈRES PREMIÈRES
+// ============================================================================
+
+builder.Services.AddScoped<MatierePremiereService>(sp =>
+    new MatierePremiereService(
+        connectionString,
+        sp.GetRequiredService<ILogger<MatierePremiereService>>(),
+        sp.GetRequiredService<IHttpContextAccessor>()
+    ));
+
 builder.Services.AddScoped<MouvementStockService>(sp =>
     new MouvementStockService(
         connectionString,
@@ -450,7 +421,6 @@ builder.Services.AddScoped<MouvementStockService>(sp =>
         sp.GetRequiredService<IHttpContextAccessor>()
     ));
 
-// AUTRES_MAGASIN
 builder.Services.AddScoped<AutresMagasinService>(sp =>
     new AutresMagasinService(
         connectionString,
@@ -458,53 +428,82 @@ builder.Services.AddScoped<AutresMagasinService>(sp =>
         sp.GetRequiredService<IHttpContextAccessor>()
     ));
 
-// Ordonnancement de l'inscription complète d'un tenant (organisation + entreprise + utilisateur + abonnement)
-builder.Services.AddScoped<RegistrationOrchestrator>(sp =>
-{
-
-    var config = sp.GetRequiredService<IConfiguration>();
-    var logger = sp.GetRequiredService<ILogger<RegistrationOrchestrator>>();
-    var organisationService = sp.GetRequiredService<OrganisationService>();
-    var entrepriseService = sp.GetRequiredService<EntrepriseService>();
-    var usersService = sp.GetRequiredService<UsersService>();
-    var subscriptionService = sp.GetRequiredService<SubscriptionService>();
-    var smtpService = sp.GetRequiredService<SmtpEmailService>();
-    var otpService = sp.GetRequiredService<OtpService>();
-    //var configuration = sp.GetRequiredService<IConfiguration>();
-
-    return new RegistrationOrchestrator(
-        connectionString,
-        logger,
-        organisationService,
-        entrepriseService,
-        usersService,
-        subscriptionService,
-        smtpService,
-        config,
-        otpService
-
-
-    );
-});
-
-// Ajouter le service Plans
-builder.Services.AddScoped<PlansService>(sp =>
-{
-    var config = sp.GetRequiredService<IConfiguration>();
-    var logger = sp.GetRequiredService<ILogger<PlansService>>();
-    var httpContextAccessor = sp.GetRequiredService<IHttpContextAccessor>();
-
-    return new PlansService(
-        config.GetConnectionString("DefaultConnection") ?? "",
-        logger,
-        httpContextAccessor
-    );
-});
 // ============================================================================
-// BUILD & CONFIGURATION MIDDLEWARE
+// 16. INJECTION DE DÉPENDANCES - SYSTÈME LIVRAISON
+// ============================================================================
+
+builder.Services.AddScoped<LivreurService>(sp =>
+    new LivreurService(
+        connectionString,
+        sp.GetRequiredService<ILogger<LivreurService>>(),
+        sp.GetRequiredService<IHttpContextAccessor>()
+    ));
+
+builder.Services.AddScoped<LivraisonsService>(sp =>
+    new LivraisonsService(
+        connectionString,
+        sp.GetRequiredService<ILogger<LivraisonsService>>(),
+        sp.GetRequiredService<IHttpContextAccessor>()
+    ));
+
+builder.Services.AddScoped<DetailLivraisonsService>(sp =>
+    new DetailLivraisonsService(
+        connectionString,
+        sp.GetRequiredService<ILogger<DetailLivraisonsService>>(),
+        sp.GetRequiredService<IHttpContextAccessor>()
+    ));
+
+// ============================================================================
+// 17. INJECTION DE DÉPENDANCES - PLANS & SUBSCRIPTION
+// ============================================================================
+
+builder.Services.AddScoped<PlansService>(sp =>
+    new PlansService(
+        connectionString,
+        sp.GetRequiredService<ILogger<PlansService>>(),
+        sp.GetRequiredService<IHttpContextAccessor>()
+    ));
+
+builder.Services.AddScoped<RegistrationOrchestrator>(sp =>
+    new RegistrationOrchestrator(
+        connectionString,
+        sp.GetRequiredService<ILogger<RegistrationOrchestrator>>(),
+        sp.GetRequiredService<OrganisationService>(),
+        sp.GetRequiredService<EntrepriseService>(),
+        sp.GetRequiredService<UsersService>(),
+        sp.GetRequiredService<SubscriptionService>(),
+        sp.GetRequiredService<SmtpEmailService>(),
+        sp.GetRequiredService<IConfiguration>(),
+        sp.GetRequiredService<OtpService>()
+    ));
+
+// ============================================================================
+// 18. INJECTION DE DÉPENDANCES - POS (Point of Sale)
+// ============================================================================
+
+builder.Services.AddScoped<PosService>(sp =>
+    new PosService(
+        connectionString,
+        sp.GetRequiredService<ILogger<PosService>>(),
+        sp.GetRequiredService<IHttpContextAccessor>()
+    ));
+
+builder.Services.AddScoped<StatisticsService>(sp =>
+    new StatisticsService(
+        connectionString,
+        sp.GetRequiredService<ILogger<StatisticsService>>(),
+        sp.GetRequiredService<IHttpContextAccessor>()
+    ));
+builder.Services.AddScoped<RapportsPdfService>();
+// ============================================================================
+// 19. BUILD DE L'APPLICATION
 // ============================================================================
 
 var app = builder.Build();
+
+// ============================================================================
+// 20. CONFIGURATION MIDDLEWARE
+// ============================================================================
 
 // Swagger en développement
 if (app.Environment.IsDevelopment())
@@ -530,14 +529,26 @@ app.UseAuthorization();
 // Mapping controllers
 app.MapControllers();
 
-// Message de démarrage
+// ============================================================================
+// 21. MESSAGES DE DÉMARRAGE
+// ============================================================================
+
 var logger = app.Services.GetRequiredService<ILogger<Program>>();
 logger.LogInformation("========================================");
-logger.LogInformation("API TSALACH démarrée avec succès !");
+logger.LogInformation("🚀 API TSALACH démarrée avec succès !");
 logger.LogInformation("========================================");
-logger.LogInformation("35 tables configurées");
-logger.LogInformation("~200 endpoints disponibles");
-logger.LogInformation("Swagger: https://localhost:5001/swagger");
+logger.LogInformation("📊 Configuration:");
+logger.LogInformation("   - 35 tables SQL configurées");
+logger.LogInformation("   - ~210 endpoints API disponibles");
+logger.LogInformation("   - POS intégré (9 endpoints)");
+logger.LogInformation("   - Multi-tenant activé");
+logger.LogInformation("   - JWT authentication activée");
 logger.LogInformation("========================================");
+logger.LogInformation("📚 Swagger: https://localhost:7xxx/swagger");
+logger.LogInformation("========================================");
+
+// ============================================================================
+// 22. RUN APPLICATION
+// ============================================================================
 
 app.Run();

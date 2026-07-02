@@ -194,9 +194,12 @@ namespace Api_BuildTech.Controllers.Table
                 cmd.Parameters.AddWithValue("@Designation", request.Designation);
                 cmd.Parameters.AddWithValue("@Disponible", request.Disponible);
                 AddParameter(cmd, "@Etat", request.Etat);
-                cmd.Parameters.AddWithValue("@IdEntreprise", request.IdEntreprise);
+                //   cmd.Parameters.AddWithValue("@IdEntreprise", request.IdEntreprise);
                 AddParameter(cmd, "@Statue", request.Statue);
                 AddParameter(cmd, "@Ordre", request.Ordre);
+
+                //idEnpreprise
+                AddEntrepriseParameter(cmd);
 
                 await cmd.ExecuteNonQueryAsync();
 

@@ -2158,6 +2158,262 @@
     "ReturnTypes": []
   },
   {
+    "ContainingType": "Api_BuildTech.Controllers.POS.PosController",
+    "Method": "ConfirmPayment",
+    "RelativePath": "api/Pos/confirm-payment",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "ConfirmPosPaymentRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.POS.PosController",
+    "Method": "CreateFacture",
+    "RelativePath": "api/Pos/factures",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "CreatePosFactureRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.POS.PosController",
+    "Method": "GetFactureComplete",
+    "RelativePath": "api/Pos/factures/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.POS.PosController",
+    "Method": "CancelFacture",
+    "RelativePath": "api/Pos/factures/{idFacture}/cancel",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "idFacture",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "CancelPosFactureRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.POS.PosController",
+    "Method": "AddDetailToFacture",
+    "RelativePath": "api/Pos/factures/{idFacture}/details",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "idFacture",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "AddPosDetailRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.POS.PosController",
+    "Method": "PutOnHold",
+    "RelativePath": "api/Pos/factures/{idFacture}/put-on-hold",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "idFacture",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "PutPosOnHoldRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.POS.PosController",
+    "Method": "ResumeFacture",
+    "RelativePath": "api/Pos/factures/{idFacture}/resume",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "idFacture",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.POS.PosController",
+    "Method": "GetAllOnHold",
+    "RelativePath": "api/Pos/factures/en-attente",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.POS.PosController",
+    "Method": "GetPaymentTypes",
+    "RelativePath": "api/Pos/payment-types",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.POS.PosController",
+    "Method": "PutOnHoldSmart",
+    "RelativePath": "api/Pos/put-on-hold",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "PutOnHoldSmartRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.POS.PosController",
+    "Method": "GetRapportStockAsync",
+    "RelativePath": "api/Pos/rapports/stock",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "page",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "downloadPDF",
+        "Type": "System.Boolean",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.POS.PosController",
+    "Method": "GetRapportVentesAsync",
+    "RelativePath": "api/Pos/rapports/ventes",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dateDebut",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "dateFin",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "page",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "downloadPDF",
+        "Type": "System.Boolean",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.POS.PosController",
+    "Method": "GetRapportVentesQuantiteAsync",
+    "RelativePath": "api/Pos/rapports/ventes-quantite",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dateDebut",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "dateFin",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "page",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "downloadPDF",
+        "Type": "System.Boolean",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.POS.PosController",
+    "Method": "GetStatistiquesJourAsync",
+    "RelativePath": "api/Pos/statistiques/jour",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "Api_BuildTech.Controllers.Registration.RegistrationController",
     "Method": "CheckEmailAvailability",
     "RelativePath": "api/Registration/check-email",
@@ -2388,6 +2644,88 @@
     "ContainingType": "Api_BuildTech.Controllers.Sessions.SessionsController",
     "Method": "GetSessionOuverte",
     "RelativePath": "api/Sessions/ouverte",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Statistics.StatisticsController",
+    "Method": "GetActivityData",
+    "RelativePath": "api/Statistics/activity",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Statistics.StatisticsController",
+    "Method": "GetChartData",
+    "RelativePath": "api/Statistics/chart",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "period",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Statistics.StatisticsController",
+    "Method": "GetCustomersStats",
+    "RelativePath": "api/Statistics/customers",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Statistics.StatisticsController",
+    "Method": "GetDashboard",
+    "RelativePath": "api/Statistics/dashboard",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "period",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Statistics.StatisticsController",
+    "Method": "GetInventoryStats",
+    "RelativePath": "api/Statistics/inventory",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Statistics.StatisticsController",
+    "Method": "GetRevenueStats",
+    "RelativePath": "api/Statistics/revenue",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Statistics.StatisticsController",
+    "Method": "GetSalesStats",
+    "RelativePath": "api/Statistics/sales",
     "HttpMethod": "GET",
     "IsController": true,
     "Order": 0,
