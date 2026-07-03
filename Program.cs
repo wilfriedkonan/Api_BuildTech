@@ -511,7 +511,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "TSALACH API v1");
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "BuildTechPlatforme API v1");
         c.RoutePrefix = "swagger";
     });
 }
@@ -535,7 +535,7 @@ app.MapControllers();
 
 var logger = app.Services.GetRequiredService<ILogger<Program>>();
 logger.LogInformation("========================================");
-logger.LogInformation("🚀 API TSALACH démarrée avec succès !");
+logger.LogInformation("🚀 API BuildTechPlatforme démarrée avec succès !");
 logger.LogInformation("========================================");
 logger.LogInformation("📊 Configuration:");
 logger.LogInformation("   - 35 tables SQL configurées");
