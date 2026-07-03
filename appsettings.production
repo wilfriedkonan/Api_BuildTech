@@ -1,0 +1,10 @@
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=safaluci-sqlserver,1433;Database=BuildTechPlatforme;User Id=sa;Password=Le_SeingneurJESUS_Est_M@_Force2026!;TrustServerCertificate=True;"
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information"
+    }
+  }
+}
