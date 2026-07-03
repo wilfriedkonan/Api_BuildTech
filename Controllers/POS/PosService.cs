@@ -2214,7 +2214,7 @@ namespace Api_BuildTech.Controllers.POS
                 // ÉTAPE 1: Compter total articles
                 int totalLignes = 0;
                 using (var cmd = new SqlCommand(@"
-            SELECT COUNT(*) FROM [TSALACH].[dbo].[V_STOCK_ARTICLES_ENTREPRISE]
+            SELECT COUNT(*) FROM [BuildTechPlatforme].[dbo].[V_STOCK_ARTICLES_ENTREPRISE]
             WHERE IdEntreprise = @IdEntreprise", conn))
                 {
                     cmd.Parameters.AddWithValue("@IdEntreprise", entrepriseId);
@@ -2236,7 +2236,7 @@ namespace Api_BuildTech.Controllers.POS
                 Designation,
                 CodeArticle,
                 StockActuel
-            FROM [TSALACH].[dbo].[V_STOCK_ARTICLES_ENTREPRISE]
+            FROM [BuildTechPlatforme].[dbo].[V_STOCK_ARTICLES_ENTREPRISE]
             WHERE IdEntreprise = @IdEntreprise
             ORDER BY Designation ASC
             OFFSET @Skip ROWS

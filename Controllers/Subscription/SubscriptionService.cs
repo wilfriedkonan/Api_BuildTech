@@ -266,7 +266,7 @@ namespace Api_BuildTech.Controllers.Subscription
                     Status = reader.GetString(3),
                     StartDate = reader.GetDateTime(4),
                     EndDate = reader.GetDateTime(5),
-                    LastValidated = reader.GetBoolean(reader.GetOrdinal( "LastValidated")),
+                    LastValidated = reader.GetBoolean(reader.GetOrdinal("LastValidated")),
                     CreatedAt = reader.GetDateTime(8),
                     UpdatedAt = ReadNullableDateTime(reader, "UpdatedAt")
                 };
@@ -326,8 +326,8 @@ namespace Api_BuildTech.Controllers.Subscription
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
             var token = new JwtSecurityToken(
-                issuer: "TSALACH-Server",
-                audience: "TSALACH-Client",
+                issuer: "BuildTechPlatforme-Server",
+                audience: "BuildTechPlatforme-Client",
                 claims: claims,
                 expires: DateTime.UtcNow.AddHours(24),
                 signingCredentials: creds
@@ -348,9 +348,9 @@ namespace Api_BuildTech.Controllers.Subscription
                     ValidateIssuerSigningKey = true,
                     IssuerSigningKey = new SymmetricSecurityKey(key),
                     ValidateIssuer = true,
-                    ValidIssuer = "TSALACH-Server",
+                    ValidIssuer = "BuildTechPlatforme-Server",
                     ValidateAudience = true,
-                    ValidAudience = "TSALACH-Client",
+                    ValidAudience = "BuildTechPlatforme-Client",
                     ClockSkew = TimeSpan.Zero
                 }, out SecurityToken validatedToken);
 

@@ -84,7 +84,7 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title = "TSALACH API",
+        Title = "BuildTechPlatforme API",
         Version = "v1",
         Description = "API de gestion de restaurant multi-tenant avec POS intégré"
     });
