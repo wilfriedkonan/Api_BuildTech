@@ -12,8 +12,8 @@ EXPOSE 8081
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["Api_BuildTech/Api_BuildTech.csproj", "Api_BuildTech/"]
-RUN dotnet restore "./Api_BuildTech/Api_BuildTech.csproj"
+COPY ["Api_BuildTech.csproj", "Api_BuildTech/"]
+RUN dotnet restore "./Api_BuildTech.csproj"
 COPY . .
 WORKDIR "/src/Api_BuildTech"
 RUN dotnet build "./Api_BuildTech.csproj" -c $BUILD_CONFIGURATION -o /app/build
