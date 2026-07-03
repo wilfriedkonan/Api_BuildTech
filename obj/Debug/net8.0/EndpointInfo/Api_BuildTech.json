@@ -1,7 +1,7 @@
 {
   "openapi": "3.0.1",
   "info": {
-    "title": "TSALACH API",
+    "title": "BuildTechPlatforme API",
     "description": "API de gestion de restaurant multi-tenant avec POS intégré",
     "version": "v1"
   },
