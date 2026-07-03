@@ -1,10 +1,36 @@
 {
+  "AllowedHosts": "*",
+
   "ConnectionStrings": {
     "DefaultConnection": "Server=safaluci-sqlserver,1433;Database=BuildTechPlatforme;User Id=sa;Password=Le_SeingneurJESUS_Est_M@_Force2026!;TrustServerCertificate=True;"
   },
+
   "Logging": {
     "LogLevel": {
-      "Default": "Information"
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
     }
+  },
+
+  "Jwt": {
+    "SecretKey": "VotreCléSecrèteTrèsLongueEtSécurisée123!@#$%^&*()",
+    "Issuer": "BuildTech-API",
+    "Audience": "BuildTech-Clients",
+    "ExpirationHours": 24
+  },
+
+  "Smtp": {
+    "Host": "mail.cocoprojects.com",
+    "Port": 587,
+    "Username": "wilfriedkonan@cocoprojects.com",
+    "Password": "Bonjour2@26!",
+    "SenderEmail": "wilfriedkonan@cocoprojects.com",
+    "SenderName": "BuildTech Solutions",
+    "UseSsl": true
+  },
+
+  "App": {
+    "FrontendUrl": "https://app.buildtch.uk",
+    "ApiUrl": "https://api.buildtch.uk"
   }
 }
