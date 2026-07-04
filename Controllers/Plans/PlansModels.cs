@@ -15,7 +15,14 @@
         public bool HasUnlimitedUsers => MaxUsers == -1;
         public bool HasUnlimitedInvoices => MaxInvoicesPerMonth == -1;
         public bool HasUnlimitedStorage => MaxStorageMB == -1;
-        public string FormattedPrice => $"{Price:C}";
+        public string FormattedPrice
+        {
+            get
+            {
+                var cultureInfo = new System.Globalization.CultureInfo("fr-CI");
+                return Price.ToString("C", cultureInfo);
+            }
+        }
         public string FormattedStorage => MaxStorageMB == -1 ? "Illimité" : $"{MaxStorageMB} MB";
         public string FormattedInvoices => MaxInvoicesPerMonth == -1 ? "Illimité" : $"{MaxInvoicesPerMonth}/mois";
         public string FormattedUsers => MaxUsers == -1 ? "Illimité" : $"{MaxUsers} utilisateurs";
@@ -57,4 +64,5 @@
         public int Total { get; set; }
         public List<PlanWithFeaturesDto> Plans { get; set; } = new();
     }
+
 }
