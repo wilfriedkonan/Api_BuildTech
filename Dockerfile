@@ -4,6 +4,15 @@
 # Stage 1: Build
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 
+# ✅ AJOUTÉ: Installer les polices (CRITICAL pour PdfSharp!)
+RUN apt-get update && apt-get install -y \
+    fonts-dejavu \
+    fonts-liberation \
+    fonts-liberation2 \
+    fonts-noto-core \
+    fontconfig \
+    && fc-cache -f -v \
+    && rm -rf /var/lib/apt/lists/*
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 

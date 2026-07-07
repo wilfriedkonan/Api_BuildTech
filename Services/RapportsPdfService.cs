@@ -33,20 +33,21 @@ namespace Api_BuildTech.Services
         private static readonly XColor COLOR_LIGHT = XColor.FromArgb(245, 245, 245);
 
         // Polices
-        private readonly XFont _fontTitrePrincipal = new XFont("Arial", 16);
-        private readonly XFont _fontTitreRapport = new XFont("Arial", 14);
-        private readonly XFont _fontSousTitre = new XFont("Arial", 10);
-        private readonly XFont _fontTableHeader = new XFont("Arial", 10);
-        private readonly XFont _fontTableRow = new XFont("Arial", 9);
-        private readonly XFont _fontLabel = new XFont("Arial", 8);
-        private readonly XFont _fontValue = new XFont("Arial", 11);
-        private readonly XFont _fontFooter = new XFont("Arial", 8);
+        private readonly XFont _fontTitrePrincipal = new XFont("Liberation Sans", 16);
+        private readonly XFont _fontTitreRapport = new XFont("Liberation Sans", 14);
+        private readonly XFont _fontSousTitre = new XFont("Liberation Sans", 10);
+        private readonly XFont _fontTableHeader = new XFont("Liberation Sans", 10);
+        private readonly XFont _fontTableRow = new XFont("Liberation Sans", 9);
+        private readonly XFont _fontLabel = new XFont("Liberation Sans", 8);
+        private readonly XFont _fontValue = new XFont("Liberation Sans", 11);
+        private readonly XFont _fontFooter = new XFont("Liberation Sans", 8);
 
         public RapportsPdfService(ILogger<RapportsPdfService> logger)
         {
             _logger = logger;
         }
 
+      
         /// <summary>
         /// Générer PDF Rapport Ventes
         /// </summary>
