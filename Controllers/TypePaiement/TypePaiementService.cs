@@ -25,7 +25,7 @@ namespace Api_BuildTech.Controllers.TypePaiement
                 using var cmd = new SqlCommand($@"
                     SELECT Id, Designation, estSupprimer, IdEntreprise, identifient
                     FROM TYPE_PAIEMENT
-                    WHERE ISNULL(estSupprimer, 0) = 0 
+                    WHERE estSupprimer IS NULL OR estSupprimer = 0 
                     ORDER BY Designation", conn);
 
                 AddEntrepriseParameter(cmd);
