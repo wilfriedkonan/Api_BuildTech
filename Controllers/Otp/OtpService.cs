@@ -8,6 +8,7 @@ namespace Api_BuildTech.Controllers.Otp
         private readonly string _connectionString;
         private readonly ILogger<OtpService> _logger;
         private readonly SmtpEmailService _emailService;
+        private readonly Whatsappservice _whatsappService;
         private readonly IConfiguration _configuration;
 
         // Configuration OTP
@@ -20,11 +21,13 @@ namespace Api_BuildTech.Controllers.Otp
             string connectionString,
             ILogger<OtpService> logger,
             SmtpEmailService emailService,
+            Whatsappservice whatsappservice,
             IConfiguration configuration)
         {
             _connectionString = connectionString;
             _logger = logger;
             _emailService = emailService;
+            _whatsappService = whatsappservice;
             _configuration = configuration;
         }
 
@@ -61,16 +64,19 @@ namespace Api_BuildTech.Controllers.Otp
                 await SaveOtpAsync(email, code, purpose, expiresAt, ipAddress);
 
                 // 5. Envoyer par email
-                var emailSent = await _emailService.SendOtpEmailAsync(email, code);
+                //var emailSent = await _emailService.SendOtpEmailAsync(email, code);
 
-                if (!emailSent)
-                {
-                    return new GenerateOtpResponse
-                    {
-                        Success = false,
-                        Message = "Erreur lors de l'envoi de l'email"
-                    };
-                }
+                //if (!emailSent)
+                //{
+                //    return new GenerateOtpResponse
+                //    {
+                //        Success = false,
+                //        Message = "Erreur lors de l'envoi de l'email"
+                //    };
+                //}
+
+                // 6. Envoyer par Whatsapp (optionnel)
+
 
                 _logger.LogInformation($"✅ OTP généré et envoyé à {email}");
 
@@ -93,7 +99,84 @@ namespace Api_BuildTech.Controllers.Otp
                 };
             }
         }
+        public async Task<GenerateOtpResponse> GenerateAndSendOtpAsyncByWha(
+           string email,
+           string purpose,
+           string? telephone,
+           string? nom,
+           string? entreprise,
+           decimal? amount,
+           string? ipAddress = null
+        )
+        {
+            try
+            {
+                _logger.LogInformation($"Génération OTP pour {email} ({purpose})");
 
+                // 1. Vérifier cooldown (éviter spam)
+                if (await IsInCooldownAsync(email, purpose))
+                {
+                    return new GenerateOtpResponse
+                    {
+                        Success = false,
+                        Message = $"Veuillez attendre {_cooldownMinutes} minutes avant de demander un nouveau code"
+                    };
+                }
+
+                // 2. Invalider les anciens OTP non utilisés
+                await InvalidateOldOtpsAsync(email, purpose);
+
+                // 3. Générer le code OTP
+                var code = GenerateOtpCode();
+                var expiresAt = DateTime.Now.AddMinutes(_otpExpirationMinutes);
+
+                // 4. Enregistrer en base de données
+                await SaveOtpAsync(email, code, purpose, expiresAt, ipAddress);
+
+                // 5. Envoyer par email
+                //var emailSent = await _emailService.SendOtpEmailAsync(email, code);
+
+                //if (!emailSent)
+                //{
+                //    return new GenerateOtpResponse
+                //    {
+                //        Success = false,
+                //        Message = "Erreur lors de l'envoi de l'email"
+                //    };
+                //}
+
+                // 6. Envoyer par Whatsapp (optionnel)
+
+                var whatsappSent = await _whatsappService.SendPaymentInvitationAsync(telephone, nom, entreprise, Convert.ToDecimal(amount));
+                if (!whatsappSent)
+                {
+                    return new GenerateOtpResponse
+                    {
+                        Success = false,
+                        Message = "Erreur lors de l'envoi de Whatsapp"
+                    };
+                }
+                _logger.LogInformation($"✅ OTP généré et envoyé à {email}");
+
+                return new GenerateOtpResponse
+                {
+                    Success = true,
+                    Message = "Code de vérification envoyé par email",
+                    ExpiresAt = expiresAt,
+                    RemainingAttempts = _maxAttempts,
+                    // DebugCode = code // À retirer en production !
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Erreur génération OTP pour {email}");
+                return new GenerateOtpResponse
+                {
+                    Success = false,
+                    Message = "Erreur lors de la génération du code"
+                };
+            }
+        }
         /// <summary>
         /// Valide un code OTP
         /// </summary>

@@ -210,9 +210,14 @@ namespace Api_BuildTech.Controllers.Registration
                 await transaction.CommitAsync();
 
                 // Générer et envoyer OTP pour confirmer l'email
-                var otpResult = await _otpService.GenerateAndSendOtpAsync(
+                var otpResult = await _otpService.GenerateAndSendOtpAsyncByWha(
                     request.Email,
-                    "REGISTRATION"
+                    "REGISTRATION",
+                    request.Telephone,
+                    request.Nom,
+                    request.EntrepriseName,
+                    plan.Price
+
                 );
 
                 result.Message += " Un code de vérification a été envoyé à votre email.";

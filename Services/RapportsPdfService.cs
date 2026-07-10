@@ -33,14 +33,17 @@ namespace Api_BuildTech.Services
         private static readonly XColor COLOR_LIGHT = XColor.FromArgb(245, 245, 245);
 
         // Polices
-        private XFont _fontTitrePrincipal;
-        private XFont _fontTitreRapport;
-        private XFont _fontSousTitre;
-        private XFont _fontTableHeader;
-        private XFont _fontTableRow;
-        private XFont _fontLabel;
-        private XFont _fontValue;
-        private XFont _fontFooter;
+        private XFont _fontTitrePrincipal = new XFont("Arial", 18, XFontStyleEx.Bold);
+        private readonly XFont _fontTitreRapport = new("Arial", 14, XFontStyleEx.Bold);
+        private readonly XFont _fontSousTitre = new("Arial", 10, XFontStyleEx.Regular);
+
+        private readonly XFont _fontTableHeader = new("Arial", 10, XFontStyleEx.Bold);
+        private readonly XFont _fontTableRow = new("Arial", 9, XFontStyleEx.Regular);
+
+        private readonly XFont _fontLabel = new("Arial", 9, XFontStyleEx.Bold);
+        private readonly XFont _fontValue = new("Arial", 9, XFontStyleEx.Regular);
+
+        private readonly XFont _fontFooter = new("Arial", 8, XFontStyleEx.Italic);
 
         public RapportsPdfService(ILogger<RapportsPdfService> logger)
         {

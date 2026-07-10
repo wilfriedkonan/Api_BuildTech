@@ -179,12 +179,14 @@ builder.Services.AddScoped<DatabaseService>(sp =>
     ));
 
 builder.Services.AddScoped<SmtpEmailService>();
+builder.Services.AddHttpClient<Whatsappservice>();
 
 builder.Services.AddScoped<OtpService>(sp =>
     new OtpService(
         connectionString,
         sp.GetRequiredService<ILogger<OtpService>>(),
         sp.GetRequiredService<SmtpEmailService>(),
+        sp.GetRequiredService<Whatsappservice>(),
         sp.GetRequiredService<IConfiguration>()
     ));
 
