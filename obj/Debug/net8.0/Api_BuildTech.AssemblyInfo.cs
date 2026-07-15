@@ -15,7 +15,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Api_BuildTech")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+97b9d16d05a340fa6431a651ec018b5c28b4f91e")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7d0634b38fc6f4e82a36c6365258a1602e387319")]
 [assembly: System.Reflection.AssemblyProductAttribute("Api_BuildTech")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Api_BuildTech")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

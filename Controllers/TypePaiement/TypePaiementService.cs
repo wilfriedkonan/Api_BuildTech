@@ -20,12 +20,11 @@ namespace Api_BuildTech.Controllers.TypePaiement
             try
             {
                 using var conn = await GetConnectionAsync();
-                // var whereClause = BuildWhereClause();
 
                 using var cmd = new SqlCommand($@"
                     SELECT Id, Designation, estSupprimer, IdEntreprise, identifient
                     FROM TYPE_PAIEMENT
-                    WHERE estSupprimer IS NULL or estSupprimer = 0
+                    WHERE estSupprimer IS NULL or estSupprimer IS NULL
                     ORDER BY Designation", conn);
 
                 //AddEntrepriseParameter(cmd);
