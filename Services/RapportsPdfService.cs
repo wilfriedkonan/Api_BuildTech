@@ -1,8 +1,4 @@
-﻿// ════════════════════════════════════════════════════════════════════════════
-// Services/RapportsPdfService.cs - ALIGNEMENT DES GRILLES CORRIGÉ
-// ════════════════════════════════════════════════════════════════════════════
-
-using PdfSharp.Drawing;
+﻿using PdfSharp.Drawing;
 using PdfSharp.Pdf;
 using PdfSharp;
 using Microsoft.Extensions.Logging;
@@ -11,7 +7,7 @@ namespace Api_BuildTech.Services
 {
     /// <summary>
     /// Service pour générer les rapports en PDF
-    /// Version finale avec alignement des grilles corrigé
+    /// Version avec Lazy Loading des fonts (robuste en production)
     /// </summary>
     public class RapportsPdfService
     {
@@ -32,24 +28,52 @@ namespace Api_BuildTech.Services
         private static readonly XColor COLOR_BORDER = XColor.FromArgb(200, 200, 200);
         private static readonly XColor COLOR_LIGHT = XColor.FromArgb(245, 245, 245);
 
-        // Polices
-        private XFont _fontTitrePrincipal = new XFont("Arial", 18, XFontStyleEx.Bold);
-        private readonly XFont _fontTitreRapport = new("Arial", 14, XFontStyleEx.Bold);
-        private readonly XFont _fontSousTitre = new("Arial", 10, XFontStyleEx.Regular);
-
-        private readonly XFont _fontTableHeader = new("Arial", 10, XFontStyleEx.Bold);
-        private readonly XFont _fontTableRow = new("Arial", 9, XFontStyleEx.Regular);
-
-        private readonly XFont _fontLabel = new("Arial", 9, XFontStyleEx.Bold);
-        private readonly XFont _fontValue = new("Arial", 9, XFontStyleEx.Regular);
-
-        private readonly XFont _fontFooter = new("Arial", 8, XFontStyleEx.Italic);
+        // ✅ FONTS LAZY-LOADED (créées à la demande, pas au démarrage)
+        private XFont? _fontTitrePrincipal;
+        private XFont? _fontTitreRapport;
+        private XFont? _fontSousTitre;
+        private XFont? _fontTableHeader;
+        private XFont? _fontTableRow;
+        private XFont? _fontLabel;
+        private XFont? _fontValue;
+        private XFont? _fontFooter;
 
         public RapportsPdfService(ILogger<RapportsPdfService> logger)
         {
             _logger = logger;
         }
 
+        // ✅ Helper pour obtenir les fonts avec fallback
+        private XFont GetFont(string fontName, double size, XFontStyleEx style = XFontStyleEx.Regular)
+        {
+            try
+            {
+                return new XFont(fontName, size, style);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning($"Police {fontName} non disponible, utilisation de Courier New: {ex.Message}");
+                try
+                {
+                    return new XFont("Courier New", size, style);
+                }
+                catch
+                {
+                    _logger.LogWarning($"Courier New non disponible, utilisation de Times New Roman");
+                    return new XFont("Times New Roman", size, style);
+                }
+            }
+        }
+
+        // ✅ Properties avec Lazy Loading
+        private XFont FontTitrePrincipal => _fontTitrePrincipal ??= GetFont("Arial", 18, XFontStyleEx.Bold);
+        private XFont FontTitreRapport => _fontTitreRapport ??= GetFont("Arial", 14, XFontStyleEx.Bold);
+        private XFont FontSousTitre => _fontSousTitre ??= GetFont("Arial", 10, XFontStyleEx.Regular);
+        private XFont FontTableHeader => _fontTableHeader ??= GetFont("Arial", 10, XFontStyleEx.Bold);
+        private XFont FontTableRow => _fontTableRow ??= GetFont("Arial", 9, XFontStyleEx.Regular);
+        private XFont FontLabel => _fontLabel ??= GetFont("Arial", 9, XFontStyleEx.Bold);
+        private XFont FontValue => _fontValue ??= GetFont("Arial", 9, XFontStyleEx.Regular);
+        private XFont FontFooter => _fontFooter ??= GetFont("Arial", 8, XFontStyleEx.Italic);
 
         /// <summary>
         /// Générer PDF Rapport Ventes
@@ -66,14 +90,14 @@ namespace Api_BuildTech.Services
                 float yPosition = MARGIN_TOP;
 
                 // En-tête
-                gfx.DrawString(rapport.NomEntreprise.ToUpper(), _fontTitrePrincipal, XBrushes.Black, MARGIN_LEFT, yPosition);
+                gfx.DrawString(rapport.NomEntreprise.ToUpper(), FontTitrePrincipal, XBrushes.Black, MARGIN_LEFT, yPosition);
                 yPosition += 18;
 
-                gfx.DrawString("RAPPORT DE VENTES", _fontTitreRapport, XBrushes.Black, MARGIN_LEFT, yPosition);
+                gfx.DrawString("RAPPORT DE VENTES", FontTitreRapport, XBrushes.Black, MARGIN_LEFT, yPosition);
                 yPosition += 16;
 
                 gfx.DrawString($"Du {rapport.DateDebut:dd/MM/yyyy} au {rapport.DateFin:dd/MM/yyyy}",
-                    _fontSousTitre, new XSolidBrush(COLOR_BORDER), MARGIN_LEFT, yPosition);
+                    FontSousTitre, new XSolidBrush(COLOR_BORDER), MARGIN_LEFT, yPosition);
                 yPosition += 20;
 
                 // Résumé totaux
@@ -86,8 +110,8 @@ namespace Api_BuildTech.Services
                 yPosition += 15;
 
                 // Titre table
-                gfx.DrawString("Détail des factures", _fontTableHeader, XBrushes.Black, MARGIN_LEFT, yPosition);
-                yPosition += 12;  // ← REMONTÉ: était 15
+                gfx.DrawString("Détail des factures", FontTableHeader, XBrushes.Black, MARGIN_LEFT, yPosition);
+                yPosition += 12;
 
                 // En-têtes table
                 var headers = new[] { "DATE", "N°FACTURE", "MONTANT" };
@@ -148,14 +172,14 @@ namespace Api_BuildTech.Services
                 float yPosition = MARGIN_TOP;
 
                 // En-tête
-                gfx.DrawString(rapport.NomEntreprise.ToUpper(), _fontTitrePrincipal, XBrushes.Black, MARGIN_LEFT, yPosition);
+                gfx.DrawString(rapport.NomEntreprise.ToUpper(), FontTitrePrincipal, XBrushes.Black, MARGIN_LEFT, yPosition);
                 yPosition += 18;
 
-                gfx.DrawString("RAPPORT VENTES - QUANTITÉ ET VALEUR", _fontTitreRapport, XBrushes.Black, MARGIN_LEFT, yPosition);
+                gfx.DrawString("RAPPORT VENTES - QUANTITÉ ET VALEUR", FontTitreRapport, XBrushes.Black, MARGIN_LEFT, yPosition);
                 yPosition += 16;
 
                 gfx.DrawString($"Du {rapport.DateDebut:dd/MM/yyyy} au {rapport.DateFin:dd/MM/yyyy}",
-                    _fontSousTitre, new XSolidBrush(COLOR_BORDER), MARGIN_LEFT, yPosition);
+                    FontSousTitre, new XSolidBrush(COLOR_BORDER), MARGIN_LEFT, yPosition);
                 yPosition += 20;
 
                 // Résumé totaux
@@ -170,8 +194,8 @@ namespace Api_BuildTech.Services
                 yPosition += 15;
 
                 // Titre table
-                gfx.DrawString("Détail par article", _fontTableHeader, XBrushes.Black, MARGIN_LEFT, yPosition);
-                yPosition += 12;  // ← REMONTÉ: était 15
+                gfx.DrawString("Détail par article", FontTableHeader, XBrushes.Black, MARGIN_LEFT, yPosition);
+                yPosition += 12;
 
                 // En-têtes table
                 var headers = new[] { "DESIGNATION", "QUANTITÉ", "MONTANT TOTAL" };
@@ -205,7 +229,7 @@ namespace Api_BuildTech.Services
                 document.Save(stream, false);
                 var result = stream.ToArray();
 
-                _logger.LogInformation($"✅ PDF Quantité généré: {result.Length} octets");
+                _logger.LogInformation($"✅ PDF Ventes Quantité généré: {result.Length} octets");
                 return result;
             }
             catch (Exception ex)
@@ -230,14 +254,14 @@ namespace Api_BuildTech.Services
                 float yPosition = MARGIN_TOP;
 
                 // En-tête
-                gfx.DrawString(rapport.NomEntreprise.ToUpper(), _fontTitrePrincipal, XBrushes.Black, MARGIN_LEFT, yPosition);
+                gfx.DrawString(rapport.NomEntreprise.ToUpper(), FontTitrePrincipal, XBrushes.Black, MARGIN_LEFT, yPosition);
                 yPosition += 18;
 
-                gfx.DrawString("RAPPORT DE STOCK", _fontTitreRapport, XBrushes.Black, MARGIN_LEFT, yPosition);
+                gfx.DrawString("RAPPORT DE STOCK", FontTitreRapport, XBrushes.Black, MARGIN_LEFT, yPosition);
                 yPosition += 16;
 
                 gfx.DrawString($"Généré le {rapport.DateRapport:dd/MM/yyyy}",
-                    _fontSousTitre, new XSolidBrush(COLOR_BORDER), MARGIN_LEFT, yPosition);
+                    FontSousTitre, new XSolidBrush(COLOR_BORDER), MARGIN_LEFT, yPosition);
                 yPosition += 20;
 
                 // Résumé totaux
@@ -250,8 +274,8 @@ namespace Api_BuildTech.Services
                 yPosition += 15;
 
                 // Titre table
-                gfx.DrawString("Détail du stock", _fontTableHeader, XBrushes.Black, MARGIN_LEFT, yPosition);
-                yPosition += 12;  // ← REMONTÉ: était 15
+                gfx.DrawString("Détail du stock", FontTableHeader, XBrushes.Black, MARGIN_LEFT, yPosition);
+                yPosition += 12;
 
                 // En-têtes table
                 var headers = new[] { "DESIGNATION", "CODE", "STOCK ACTUEL" };
@@ -307,18 +331,18 @@ namespace Api_BuildTech.Services
 
             // Box 1
             DrawBox(gfx, MARGIN_LEFT, yPos, boxWidth, boxHeight);
-            gfx.DrawString(total1.label, _fontLabel, new XSolidBrush(COLOR_BORDER), MARGIN_LEFT + 5, yPos + 8);
-            gfx.DrawString(total1.value, _fontValue, XBrushes.Black, MARGIN_LEFT + 5, yPos + 18);
+            gfx.DrawString(total1.label, FontLabel, new XSolidBrush(COLOR_BORDER), MARGIN_LEFT + 5, yPos + 8);
+            gfx.DrawString(total1.value, FontValue, XBrushes.Black, MARGIN_LEFT + 5, yPos + 18);
 
             // Box 2
             DrawBox(gfx, MARGIN_LEFT + boxWidth + 5, yPos, boxWidth, boxHeight);
-            gfx.DrawString(total2.label, _fontLabel, new XSolidBrush(COLOR_BORDER), MARGIN_LEFT + boxWidth + 10, yPos + 8);
-            gfx.DrawString(total2.value, _fontValue, XBrushes.Black, MARGIN_LEFT + boxWidth + 10, yPos + 18);
+            gfx.DrawString(total2.label, FontLabel, new XSolidBrush(COLOR_BORDER), MARGIN_LEFT + boxWidth + 10, yPos + 8);
+            gfx.DrawString(total2.value, FontValue, XBrushes.Black, MARGIN_LEFT + boxWidth + 10, yPos + 18);
 
             // Box 3
             DrawBox(gfx, MARGIN_LEFT + (boxWidth + 5) * 2, yPos, boxWidth, boxHeight);
-            gfx.DrawString(total3.label, _fontLabel, new XSolidBrush(COLOR_BORDER), MARGIN_LEFT + (boxWidth + 5) * 2 + 5, yPos + 8);
-            gfx.DrawString(total3.value, _fontValue, XBrushes.Black, MARGIN_LEFT + (boxWidth + 5) * 2 + 5, yPos + 18);
+            gfx.DrawString(total3.label, FontLabel, new XSolidBrush(COLOR_BORDER), MARGIN_LEFT + (boxWidth + 5) * 2 + 5, yPos + 8);
+            gfx.DrawString(total3.value, FontValue, XBrushes.Black, MARGIN_LEFT + (boxWidth + 5) * 2 + 5, yPos + 18);
 
             return yPos + boxHeight + 5;
         }
@@ -329,25 +353,25 @@ namespace Api_BuildTech.Services
 
             // Background
             gfx.DrawRectangle(new XSolidBrush(COLOR_LIGHT_GRAY),
-                MARGIN_LEFT, yPos, CONTENT_WIDTH, 18);  // ← RÉDUIT: était 20
+                MARGIN_LEFT, yPos, CONTENT_WIDTH, 18);
 
-            // Headers - ALIGNEMENT VERTICAL AMÉLIORÉ
+            // Headers
             for (int i = 0; i < headers.Length; i++)
             {
-                gfx.DrawString(headers[i], _fontTableHeader, XBrushes.Black, xPos + 3, yPos + 13);  // ← AJUSTÉ: était yPos + 4
+                gfx.DrawString(headers[i], FontTableHeader, XBrushes.Black, xPos + 3, yPos + 13);
                 xPos += columnWidths[i];
             }
 
             // Border
-            gfx.DrawRectangle(XPens.Gray, MARGIN_LEFT, yPos, CONTENT_WIDTH, 18);  // ← RÉDUIT: était 20
+            gfx.DrawRectangle(XPens.Gray, MARGIN_LEFT, yPos, CONTENT_WIDTH, 18);
 
-            return yPos + 20;  // ← REMONTÉ: était 22
+            return yPos + 20;
         }
 
         private float DrawTableRow(XGraphics gfx, string[] values, float[] columnWidths, float yPos)
         {
             float xPos = MARGIN_LEFT;
-            const float ROW_HEIGHT = 15;  // ← RÉDUIT: était 16
+            const float ROW_HEIGHT = 15;
 
             // Background alternée
             if ((int)(yPos / ROW_HEIGHT) % 2 == 0)
@@ -356,7 +380,7 @@ namespace Api_BuildTech.Services
                     MARGIN_LEFT, yPos, CONTENT_WIDTH, ROW_HEIGHT);
             }
 
-            // Valeurs - ALIGNEMENT VERTICAL AMÉLIORÉ
+            // Valeurs
             for (int i = 0; i < values.Length; i++)
             {
                 var text = values[i] ?? "";
@@ -364,7 +388,7 @@ namespace Api_BuildTech.Services
                 if (text.Length > 50)
                     text = text.Substring(0, 47) + "...";
 
-                gfx.DrawString(text, _fontTableRow, XBrushes.Black, xPos + 3, yPos + 12);  // ← AJUSTÉ: était yPos + 3
+                gfx.DrawString(text, FontTableRow, XBrushes.Black, xPos + 3, yPos + 12);
                 xPos += columnWidths[i];
             }
 
@@ -382,7 +406,7 @@ namespace Api_BuildTech.Services
 
         private void DrawFooter(XGraphics gfx, string text, PdfPage page)
         {
-            gfx.DrawString(text, _fontFooter, XBrushes.Gray, MARGIN_LEFT, page.Height - MARGIN_BOTTOM + 10);
+            gfx.DrawString(text, FontFooter, XBrushes.Gray, MARGIN_LEFT, page.Height - MARGIN_BOTTOM + 10);
         }
 
         private string FormatNombre(decimal nombre)
