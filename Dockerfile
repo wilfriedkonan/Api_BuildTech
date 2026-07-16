@@ -66,8 +66,8 @@ LABEL description="Api_BuildTech - .NET 8.0 API"
 LABEL version="1.0"
 
 # ✅ Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD dotnet healthcheck Api_BuildTech.dll || exit 1
+#HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    #CMD dotnet healthcheck Api_BuildTech.dll || exit 1
 
 # Point d'entrée
 ENTRYPOINT ["dotnet", "Api_BuildTech.dll"]
