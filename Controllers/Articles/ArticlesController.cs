@@ -44,7 +44,68 @@ namespace Api_BuildTech.Controllers.Articles
                 return StatusCode(500, new { success = false, message = "Erreur serveur" });
             }
         }
+        [HttpGet("list")]
+        public async Task<IActionResult> GetAllWithPagination(
+    [FromQuery] int page = 1,
+    [FromQuery] int pageSize = 20,
+    [FromQuery] string? searchTerm = null,
+    [FromQuery] Guid? idCategorie = null,
+    [FromQuery] bool? estStockable = null,
+    [FromQuery] bool? estVisibleCatalogue = null,
+    [FromQuery] bool? estPos = null,
+    [FromQuery] bool? estPromo = null,
+    [FromQuery] string? etat = null,
+    [FromQuery] decimal? prixVenteMin = null,
+    [FromQuery] decimal? prixVenteMax = null,
+    [FromQuery] string orderBy = "designation",
+    [FromQuery] string orderDirection = "asc")
+        {
+            try
+            {
+                // Validation pagination
+                if (page < 1)
+                    return BadRequest(new { success = false, message = "Le numéro de page doit être >= 1" });
 
+                if (pageSize < 1 || pageSize > 100)
+                    return BadRequest(new { success = false, message = "pageSize doit être entre 1 et 100" });
+
+                // Créer le filtre
+                var filter = new GetArticlesFilterRequest
+                {
+                    Page = page,
+                    PageSize = pageSize,
+                    SearchTerm = searchTerm,
+                    IdCathegorie = idCategorie,
+                    EstStockable = estStockable,
+                    EstVisibleCatalogue = estVisibleCatalogue,
+                    EstPos = estPos,
+                    EstPromo = estPromo,
+                    Etat = etat,
+                    PrixVenteMin = prixVenteMin,
+                    PrixVenteMax = prixVenteMax,
+                    OrderBy = orderBy,
+                    OrderDirection = orderDirection
+                };
+
+                // Récupérer les articles
+                var result = await _articlesService.GetAllWithPaginationAsync(filter);
+
+                return Ok(new
+                {
+                    success = result.Success,
+                    total = result.Total,
+                    totalStockables = result.TotalStockables,
+                    totalEnAlerte = result.TotalEnAlerte,
+                    pagination = result.Pagination,
+                    data = result.Articles
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erreur récupération articles avec pagination");
+                return StatusCode(500, new { success = false, message = "Erreur serveur" });
+            }
+        }
         /// <summary>
         /// GET BY ID - Récupère un article par son ID
         /// </summary>
@@ -668,5 +729,205 @@ namespace Api_BuildTech.Controllers.Articles
         //        return StatusCode(500, new { success = false, message = "Erreur serveur" });
         //    }
         //}
+
+
+
+
+
+        // ════════════════════════════════════════════════════════════════════════════
+        // ENDPOINT 1: CATÉGORIES AVEC STATS
+        // ════════════════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// GET - Récupère les catégories avec leurs articles visibles (PUBLIC)
+        /// Utilise la vue V_CATALOGUE_CATEGORIES pour performance optimale
+        /// </summary>
+        /// <example>
+        /// GET /api/catalogue/public/categories
+        /// GET /api/catalogue/public/categories?page=1&pageSize=20&orderBy=nom&orderDirection=asc
+        /// </example>
+        [HttpGet("public/categories")]
+        [AllowAnonymous]  // ← PAS D'AUTHENTIFICATION
+        public async Task<IActionResult> GetCategoriesPublic(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20,
+            [FromQuery] string orderBy = "ordre",    // ordre, nom, articles
+            [FromQuery] string orderDirection = "asc")  // asc, desc
+        {
+            try
+            {
+                // Validation
+                if (page < 1)
+                    return BadRequest(new { success = false, message = "Page >= 1" });
+
+                if (pageSize < 1 || pageSize > 100)
+                    return BadRequest(new { success = false, message = "pageSize entre 1-100" });
+
+                // Récupérer les catégories
+                var result = await _articlesService.GetCategoriesWithArticlesAsync(
+                    page, pageSize, orderBy, orderDirection);
+
+                return Ok(new
+                {
+                    success = result.Success,
+                    total = result.Total,
+                    pagination = result.Pagination,
+                    data = result.Categories
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erreur récupération catégories catalogue");
+                return StatusCode(500, new { success = false, message = "Erreur serveur" });
+            }
+        }
+
+        // ════════════════════════════════════════════════════════════════════════════
+        // ENDPOINT 2: ARTICLES VISIBLES AU CATALOGUE
+        // ════════════════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// GET - Récupère les articles visibles au catalogue (PUBLIC)
+        /// Utilise la vue V_CATALOGUE_ARTICLES pour performance optimale
+        /// </summary>
+        /// <example>
+        /// GET /api/catalogue/public/articles
+        /// GET /api/catalogue/public/articles?page=1&pageSize=50&idCategorie=xxx&orderBy=prix&orderDirection=asc
+        /// GET /api/catalogue/public/articles?searchTerm=produit&estPromo=true
+        /// </example>
+        [HttpGet("public/articles")]
+        [AllowAnonymous]  // ← PAS D'AUTHENTIFICATION
+        public async Task<IActionResult> GetArticlesPublic(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20,
+            [FromQuery] Guid? idCategorie = null,
+            [FromQuery] string? searchTerm = null,
+            [FromQuery] bool? estPromo = null,
+            [FromQuery] decimal? prixMin = null,
+            [FromQuery] decimal? prixMax = null,
+            [FromQuery] string orderBy = "designation",  // designation, prix, categorie, date
+            [FromQuery] string orderDirection = "asc")
+        {
+            try
+            {
+                // Validation
+                if (page < 1)
+                    return BadRequest(new { success = false, message = "Page >= 1" });
+
+                if (pageSize < 1 || pageSize > 100)
+                    return BadRequest(new { success = false, message = "pageSize entre 1-100" });
+
+                // Créer le filtre
+                var filter = new CatalogueArticleFilterRequest
+                {
+                    Page = page,
+                    PageSize = pageSize,
+                    IdCategorie = idCategorie,
+                    SearchTerm = searchTerm,
+                    EstPromo = estPromo,
+                    PrixMin = prixMin,
+                    PrixMax = prixMax,
+                    OrderBy = orderBy,
+                    OrderDirection = orderDirection
+                };
+
+                // Récupérer les articles
+                var result = await _articlesService.GetArticlesPublicAsync(filter);
+
+                return Ok(new
+                {
+                    success = result.Success,
+                    total = result.Total,
+                    pagination = result.Pagination,
+                    data = result.Articles
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erreur récupération articles catalogue");
+                return StatusCode(500, new { success = false, message = "Erreur serveur" });
+            }
+        }
+
+        // ════════════════════════════════════════════════════════════════════════════
+        // ENDPOINT 3: ARTICLE PAR ID (PUBLIC)
+        // ════════════════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// GET - Récupère un article spécifique du catalogue (PUBLIC)
+        /// </summary>
+        /// <example>
+        /// GET /api/catalogue/public/articles/550e8400-e29b-41d4-a716-446655440000
+        /// </example>
+        [HttpGet("public/articles/{id}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetArticlePublic(Guid id)
+        {
+            try
+            {
+                var article = await _articlesService.GetArticlePublicAsync(id);
+
+                if (article == null)
+                    return NotFound(new { success = false, message = "Article non trouvé" });
+
+                return Ok(new
+                {
+                    success = true,
+                    data = article
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Erreur récupération article {id}");
+                return StatusCode(500, new { success = false, message = "Erreur serveur" });
+            }
+        }
+
+        // ════════════════════════════════════════════════════════════════════════════
+        // ENDPOINT 4: ARTICLES PAR CATÉGORIE (PUBLIC)
+        // ════════════════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// GET - Récupère tous les articles d'une catégorie (PUBLIC)
+        /// </summary>
+        /// <example>
+        /// GET /api/catalogue/public/categories/550e8400-e29b-41d4-a716-446655440000/articles
+        /// GET /api/catalogue/public/categories/550e8400-e29b-41d4-a716-446655440000/articles?orderBy=prix&orderDirection=desc
+        /// </example>
+        [HttpGet("public/categories/{idCategorie}/articles")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetArticlesByCategoryPublic(
+            Guid idCategorie,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 50,
+            [FromQuery] string orderBy = "designation",
+            [FromQuery] string orderDirection = "asc")
+        {
+            try
+            {
+                if (page < 1 || pageSize < 1 || pageSize > 100)
+                    return BadRequest(new { success = false, message = "Paramètres invalides" });
+
+                var result = await _articlesService.GetArticlesByCategoryAsync(
+                    idCategorie, page, pageSize, orderBy, orderDirection);
+
+                if (!result.Success)
+                    return NotFound(new { success = false, message = "Catégorie non trouvée" });
+
+                return Ok(new
+                {
+                    success = result.Success,
+                    categoryName = result.CategoryName,
+                    total = result.Total,
+                    pagination = result.Pagination,
+                    data = result.Articles
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Erreur récupération articles catégorie {idCategorie}");
+                return StatusCode(500, new { success = false, message = "Erreur serveur" });
+            }
+        }
     }
 }

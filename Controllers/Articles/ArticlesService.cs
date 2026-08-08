@@ -6,6 +6,7 @@ namespace Api_BuildTech.Controllers.Articles
 {
     public class ArticlesService : DatabaseService
     {
+
         public ArticlesService(
             string connectionString,
             ILogger<ArticlesService> logger,
@@ -161,6 +162,269 @@ namespace Api_BuildTech.Controllers.Articles
             return result;
         }
 
+        public async Task<ArticleListResponse> GetAllWithPaginationAsync(GetArticlesFilterRequest filter)
+        {
+            var result = new ArticleListResponse { Success = true };
+
+            try
+            {
+                // Validation
+                if (filter.Page < 1) filter.Page = 1;
+                if (filter.PageSize < 1) filter.PageSize = 20;
+                if (filter.PageSize > 100) filter.PageSize = 100;
+
+                using var conn = await GetConnectionAsync();
+
+                // ════════════════════════════════════════════════════════════════════════════
+                // ÉTAPE 1: COMPTER LE TOTAL (avant pagination)
+                // ════════════════════════════════════════════════════════════════════════════
+
+                var whereClause = BuildWhereClause("a");
+                var filterClause = BuildFilterClause(filter);
+
+                using (var cmdCount = new SqlCommand($@"
+                    SELECT COUNT(*) as Total
+                    FROM ARTICLES a
+                    LEFT JOIN CATHEGORIE c ON a.IdCathegorie = c.Id
+                    WHERE ISNULL(a.Etat, 'Actif') != 'Supprimer' 
+                    {whereClause}
+                    {filterClause}", conn))
+                {
+                    AddEntrepriseParameter(cmdCount);
+                    AddFilterParameters(cmdCount, filter);
+
+                    var totalCount = (int)await cmdCount.ExecuteScalarAsync();
+                    result.Total = totalCount;
+
+                    // Calculer pagination
+                    var totalPages = (int)Math.Ceiling((double)totalCount / filter.PageSize);
+                    var offset = (filter.Page - 1) * filter.PageSize;
+
+                    result.Pagination = new PaginationMetadata
+                    {
+                        CurrentPage = filter.Page,
+                        PageSize = filter.PageSize,
+                        TotalPages = totalPages,
+                        TotalRecords = totalCount,
+                        HasPrevious = filter.Page > 1,
+                        HasNext = filter.Page < totalPages
+                    };
+                }
+
+                // ════════════════════════════════════════════════════════════════════════════
+                // ÉTAPE 2: RÉCUPÉRER LES ARTICLES (avec pagination et tri)
+                // ════════════════════════════════════════════════════════════════════════════
+
+                var orderByClause = BuildOrderByClause(filter);
+                var offset2 = (filter.Page - 1) * filter.PageSize;
+
+                using (var cmd = new SqlCommand($@"
+                    SELECT 
+                        a.Id, a.CodeArticle, a.Designation, a.Description, a.CodeBarre,
+                        a.PrixAchat, a.PrixVente, a.PrixExterieur, a.EstPos, a.Position,
+                        a.EstExonerer, a.TypeRepas, a.Etat, a.DatePerenption,
+                        a.EstStockable, a.EstEnStock, a.EstEnPorter, a.IdEntreprise,
+                        a.IdCathegorie, a.IdType_Repas, a.PrixPromo, a.EstPromo,
+                        a.EstComposer, a.EstVendableSansComposition,
+                        a.AfficherStockPOS, a.TauxTva, a.Stock, a.SeuilAlerte,
+                        a.EstVisibleCatalogue,
+                        a.ImageURL, a.Statut,
+                        a.DateCreate, a.idCreateUser, a.DateLastUpdate, a.idLastUpdateUser,
+                        c.Designation AS NomCategorie,
+                        u1.Nom + ' ' + ISNULL(u1.Prenom, '') AS NomCreateUser,
+                        u2.Nom + ' ' + ISNULL(u2.Prenom, '') AS NomLastUpdateUser
+                    FROM ARTICLES a
+                    LEFT JOIN CATHEGORIE c ON a.IdCathegorie = c.Id
+                    LEFT JOIN UTILISATEURS u1 ON a.idCreateUser = u1.Id
+                    LEFT JOIN UTILISATEURS u2 ON a.idLastUpdateUser = u2.Id
+                    WHERE ISNULL(a.Etat, 'Actif') != 'Supprimer' 
+                    {whereClause}
+                    {filterClause}
+                    {orderByClause}
+                    OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY", conn))
+                {
+                    AddEntrepriseParameter(cmd);
+                    AddFilterParameters(cmd, filter);
+                    cmd.Parameters.AddWithValue("@Offset", offset2);
+                    cmd.Parameters.AddWithValue("@PageSize", filter.PageSize);
+
+                    using var reader = await cmd.ExecuteReaderAsync();
+
+                    while (await reader.ReadAsync())
+                    {
+                        var article = MapArticleFromReader(reader);
+                        result.Articles.Add(article);
+                    }
+                }
+
+                // ════════════════════════════════════════════════════════════════════════════
+                // ÉTAPE 3: CALCULER LE STOCK ACTUEL (pour articles stockables)
+                // ════════════════════════════════════════════════════════════════════════════
+
+                foreach (var article in result.Articles.Where(a => a.EstStockable == true))
+                {
+                    article.StockActuel = await CalculateStockActuelAsync(article.Id);
+
+                    // Vérifier alerte stock
+                    if (article.SeuilAlerte.HasValue && article.StockActuel < article.SeuilAlerte.Value)
+                    {
+                        article.AlerteStock = true;
+                        result.TotalEnAlerte++;
+                    }
+
+                    result.TotalStockables++;
+                }
+
+                _logger.LogInformation($"Articles récupérés - Page {filter.Page}/{result.Pagination?.TotalPages}, Total: {result.Total}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erreur récupération articles avec pagination");
+                result.Success = false;
+            }
+
+            return result;
+        }
+        private string BuildFilterClause(GetArticlesFilterRequest filter)
+        {
+            var conditions = new List<string>();
+
+            // Recherche texte
+            if (!string.IsNullOrWhiteSpace(filter.SearchTerm))
+            {
+                conditions.Add(@"(
+                    a.Designation LIKE @SearchTerm 
+                    OR a.CodeArticle LIKE @SearchTerm 
+                    OR a.CodeBarre LIKE @SearchTerm
+                    OR a.Description LIKE @SearchTerm
+                )");
+            }
+
+            // Filtre catégorie
+            if (filter.IdCathegorie.HasValue && filter.IdCathegorie != Guid.Empty)
+            {
+                conditions.Add("a.IdCathegorie = @IdCathegorie");
+            }
+
+            // Filtre stockable
+            if (filter.EstStockable.HasValue)
+            {
+                conditions.Add($"a.EstStockable = @EstStockable");
+            }
+
+            // Filtre visible catalogue
+            if (filter.EstVisibleCatalogue.HasValue)
+            {
+                conditions.Add($"ISNULL(a.EstVisibleCatalogue, 1) = @EstVisibleCatalogue");
+            }
+
+            // Filtre POS
+            if (filter.EstPos.HasValue)
+            {
+                conditions.Add($"a.EstPos = @EstPos");
+            }
+
+            // Filtre promo
+            if (filter.EstPromo.HasValue)
+            {
+                conditions.Add($"a.EstPromo = @EstPromo");
+            }
+
+            // Filtre état
+            if (!string.IsNullOrWhiteSpace(filter.Etat))
+            {
+                conditions.Add("a.Etat = @Etat");
+            }
+
+            // Filtre prix min
+            if (filter.PrixVenteMin.HasValue)
+            {
+                conditions.Add("a.PrixVente >= @PrixVenteMin");
+            }
+
+            // Filtre prix max
+            if (filter.PrixVenteMax.HasValue)
+            {
+                conditions.Add("a.PrixVente <= @PrixVenteMax");
+            }
+
+            if (conditions.Count == 0)
+                return string.Empty;
+
+            return "AND " + string.Join(" AND ", conditions);
+        }
+
+        /// <summary>
+        /// Ajouter les paramètres SQL pour les filtres
+        /// </summary>
+        private void AddFilterParameters(SqlCommand cmd, GetArticlesFilterRequest filter)
+        {
+            if (!string.IsNullOrWhiteSpace(filter.SearchTerm))
+            {
+                cmd.Parameters.AddWithValue("@SearchTerm", $"%{filter.SearchTerm}%");
+            }
+
+            if (filter.IdCathegorie.HasValue && filter.IdCathegorie != Guid.Empty)
+            {
+                cmd.Parameters.AddWithValue("@IdCathegorie", filter.IdCathegorie.Value);
+            }
+
+            if (filter.EstStockable.HasValue)
+            {
+                cmd.Parameters.AddWithValue("@EstStockable", filter.EstStockable.Value ? 1 : 0);
+            }
+
+            if (filter.EstVisibleCatalogue.HasValue)
+            {
+                cmd.Parameters.AddWithValue("@EstVisibleCatalogue", filter.EstVisibleCatalogue.Value ? 1 : 0);
+            }
+
+            if (filter.EstPos.HasValue)
+            {
+                cmd.Parameters.AddWithValue("@EstPos", filter.EstPos.Value ? 1 : 0);
+            }
+
+            if (filter.EstPromo.HasValue)
+            {
+                cmd.Parameters.AddWithValue("@EstPromo", filter.EstPromo.Value ? 1 : 0);
+            }
+
+            if (!string.IsNullOrWhiteSpace(filter.Etat))
+            {
+                cmd.Parameters.AddWithValue("@Etat", filter.Etat);
+            }
+
+            if (filter.PrixVenteMin.HasValue)
+            {
+                cmd.Parameters.AddWithValue("@PrixVenteMin", filter.PrixVenteMin.Value);
+            }
+
+            if (filter.PrixVenteMax.HasValue)
+            {
+                cmd.Parameters.AddWithValue("@PrixVenteMax", filter.PrixVenteMax.Value);
+            }
+        }
+
+        /// <summary>
+        /// Construire la clause ORDER BY
+        /// </summary>
+        private string BuildOrderByClause(GetArticlesFilterRequest filter)
+        {
+            var orderColumn = filter.OrderBy.ToLower() switch
+            {
+                "prixvente" => "a.PrixVente",
+                "prixachat" => "a.PrixAchat",
+                "stock" => "a.Stock",
+                "etat" => "a.Etat",
+                "categorie" => "c.Designation",
+                "date" => "a.DateCreate",
+                _ => "a.Designation"
+            };
+
+            var orderDir = filter.OrderDirection.ToLower() == "desc" ? "DESC" : "ASC";
+
+            return $"ORDER BY {orderColumn} {orderDir}";
+        }
         // ========================================
         // GET BY ID
         // ========================================
@@ -1236,6 +1500,490 @@ namespace Api_BuildTech.Controllers.Articles
         // // ========================================
         // // HELPER : MAP ARTICLE FROM READER
         // // ========================================
+        /// <summary>
+        /// Récupère les catégories avec statistiques (articles, prix min/max, promos)
+        /// Utilise V_CATALOGUE_CATEGORIES pour performance
+        /// </summary>
+        public async Task<CatalogueResponseDto> GetCategoriesWithArticlesAsync(
+            int page, int pageSize, string orderBy, string orderDirection)
+        {
+            var result = new CatalogueResponseDto { Success = true };
+
+            try
+            {
+                if (page < 1) page = 1;
+                if (pageSize < 1) pageSize = 20;
+                if (pageSize > 100) pageSize = 100;
+
+                using var conn = await GetConnectionAsync();
+
+                // Compter total catégories
+                using (var cmdCount = new SqlCommand(@"
+                    SELECT COUNT(*) FROM V_CATALOGUE_CATEGORIES", conn))
+                {
+                    var totalCount = (int)await cmdCount.ExecuteScalarAsync();
+                    result.Total = totalCount;
+
+                    var totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+                    var offset = (page - 1) * pageSize;
+
+                    result.Pagination = new PaginationMetadata
+                    {
+                        CurrentPage = page,
+                        PageSize = pageSize,
+                        TotalPages = totalPages,
+                        TotalRecords = totalCount,
+                        HasPrevious = page > 1,
+                        HasNext = page < totalPages
+                    };
+                }
+
+                // Récupérer les catégories
+                var orderByClause = BuildOrderByCategories(orderBy);
+                var orderDir = orderDirection.ToLower() == "desc" ? "DESC" : "ASC";
+
+                using (var cmd = new SqlCommand($@"
+                    SELECT 
+                        IdCategorie,
+                        NomCategorie,
+                        OrdreCategorie,
+                        ImageURL,
+                        Description,
+                        NombreArticles,
+                        NombreArticlesPromo,
+                        PrixMin,
+                        PrixMax,
+                        PrixMoyen
+                    FROM V_CATALOGUE_CATEGORIES
+                    ORDER BY {orderByClause} {orderDir}
+                    OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY", conn))
+                {
+                    cmd.Parameters.AddWithValue("@Offset", (page - 1) * pageSize);
+                    cmd.Parameters.AddWithValue("@PageSize", pageSize);
+
+                    using var reader = await cmd.ExecuteReaderAsync();
+
+                    while (await reader.ReadAsync())
+                    {
+                        var category = new CatalogueCategory
+                        {
+                            IdCategorie = (Guid)reader["IdCategorie"],
+                            NomCategorie = reader["NomCategorie"]?.ToString() ?? "",
+                            OrdreCategorie = reader["OrdreCategorie"] != DBNull.Value ? (int)reader["OrdreCategorie"] : 0,
+                            ImageURL = reader["ImageURL"]?.ToString(),
+                            Description = reader["Description"]?.ToString(),
+                            NombreArticles = reader["NombreArticles"] != DBNull.Value ? (int)reader["NombreArticles"] : 0,
+                            NombreArticlesPromo = reader["NombreArticlesPromo"] != DBNull.Value ? (int)reader["NombreArticlesPromo"] : 0,
+                            ////PrixMin = reader["PrixMin"] != DBNull.Value ? (decimal)reader["PrixMin"] : 0,
+                            ////PrixMax = reader["PrixMax"] != DBNull.Value ? (decimal)reader["PrixMax"] : 0,
+                            ////PrixMoyen = reader["PrixMoyen"] != DBNull.Value ? Math.Round((decimal)reader["PrixMoyen"], 2) : 0
+                            PrixMin = reader["PrixMin"] != DBNull.Value ? Convert.ToDecimal(reader["PrixMin"]) : 0,
+                            PrixMax = reader["PrixMax"] != DBNull.Value ? Convert.ToDecimal(reader["PrixMax"]) : 0,
+                            PrixMoyen = reader["PrixMoyen"] != DBNull.Value ? Math.Round(Convert.ToDecimal(reader["PrixMoyen"]), 2) : 0
+                        };
+
+                        result.Categories.Add(category);
+                    }
+                }
+
+                _logger.LogInformation($"Catégories catalogue récupérées - Page {page}/{result.Pagination?.TotalPages}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erreur récupération catégories catalogue");
+                result.Success = false;
+            }
+
+            return result;
+        }
+
+        // ════════════════════════════════════════════════════════════════════════════
+        // MÉTHODE 2: ARTICLES VISIBLES AU CATALOGUE
+        // ════════════════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Récupère les articles visibles au catalogue avec filtres
+        /// Utilise V_CATALOGUE_ARTICLES pour performance
+        /// </summary>
+        public async Task<CatalogueArticlesResponseDto> GetArticlesPublicAsync(
+            CatalogueArticleFilterRequest filter)
+        {
+            var result = new CatalogueArticlesResponseDto { Success = true };
+
+            try
+            {
+                if (filter.Page < 1) filter.Page = 1;
+                if (filter.PageSize < 1) filter.PageSize = 20;
+                if (filter.PageSize > 100) filter.PageSize = 100;
+
+                using var conn = await GetConnectionAsync();
+
+                // Construire les clauses WHERE et paramètres
+                var filterClause = BuildCatalogueFilterClause(filter);
+
+                // Compter total
+                using (var cmdCount = new SqlCommand($@"
+                    SELECT COUNT(DISTINCT IdArticle) 
+                    FROM V_CATALOGUE_ARTICLES
+                    WHERE 1=1 {filterClause}", conn))
+                {
+                    AddCatalogueFilterParameters(cmdCount, filter);
+                    var totalCount = (int)await cmdCount.ExecuteScalarAsync();
+                    result.Total = totalCount;
+
+                    var totalPages = (int)Math.Ceiling((double)totalCount / filter.PageSize);
+
+                    result.Pagination = new PaginationMetadata
+                    {
+                        CurrentPage = filter.Page,
+                        PageSize = filter.PageSize,
+                        TotalPages = totalPages,
+                        TotalRecords = totalCount,
+                        HasPrevious = filter.Page > 1,
+                        HasNext = filter.Page < totalPages
+                    };
+                }
+
+                // Récupérer les articles
+                var orderByClause = BuildOrderByArticles(filter.OrderBy);
+                var orderDir = filter.OrderDirection.ToLower() == "desc" ? "DESC" : "ASC";
+                var offset = (filter.Page - 1) * filter.PageSize;
+
+                using (var cmd = new SqlCommand($@"
+                    SELECT 
+                        IdArticle,
+                        CodeArticle,
+                        NomArticle,
+                        DescriptionArticle,
+                        CodeBarre,
+                        PrixVente,
+                        PrixPromo,
+                        EstPromo,
+                        Stock,
+                        EstStockable,
+                        AfficherStockPOS,
+                        ImageArticle,
+                        NomCategorie,
+                        IdCategorie,
+                        Position,
+                        TauxTva,
+                        DateCreate,
+                        DateLastUpdate
+                    FROM V_CATALOGUE_ARTICLES
+                    WHERE 1=1 {filterClause}
+                    ORDER BY {orderByClause} {orderDir}
+                    OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY", conn))
+                {
+                    AddCatalogueFilterParameters(cmd, filter);
+                    cmd.Parameters.AddWithValue("@Offset", offset);
+                    cmd.Parameters.AddWithValue("@PageSize", filter.PageSize);
+
+                    using var reader = await cmd.ExecuteReaderAsync();
+
+                    while (await reader.ReadAsync())
+                    {
+                        var article = new CatalogueArticle
+                        {
+                            IdArticle = (Guid)reader["IdArticle"],
+                            CodeArticle = reader["CodeArticle"]?.ToString(),
+                            NomArticle = reader["NomArticle"]?.ToString() ?? "",
+                            DescriptionArticle = reader["DescriptionArticle"]?.ToString(),
+                            CodeBarre = reader["CodeBarre"]?.ToString(),
+                            PrixVente = (decimal)reader["PrixVente"],
+                            PrixPromo = reader["PrixPromo"] != DBNull.Value ? (decimal)reader["PrixPromo"] : null,
+                            EstPromo = reader["EstPromo"] != DBNull.Value && (bool)reader["EstPromo"],
+                            Stock = reader["Stock"] != DBNull.Value ? (decimal)reader["Stock"] : 0,
+                            EstStockable = reader["EstStockable"] != DBNull.Value && (bool)reader["EstStockable"],
+                            AfficherStockPOS = reader["AfficherStockPOS"] != DBNull.Value && (bool)reader["AfficherStockPOS"],
+                            ImageURL = reader["ImageArticle"]?.ToString(),
+                            NomCategorie = reader["NomCategorie"]?.ToString(),
+                            IdCategorie = reader["IdCategorie"] != DBNull.Value ? (Guid)reader["IdCategorie"] : Guid.Empty,
+                            Position = reader["Position"] != DBNull.Value ? (int)reader["Position"] : 0,
+                            TauxTva = reader["TauxTva"] != DBNull.Value ? (decimal)reader["TauxTva"] : 0,
+                            DateCreate = reader["DateCreate"] != DBNull.Value ? (DateTime)reader["DateCreate"] : null,
+                            DateLastUpdate = reader["DateLastUpdate"] != DBNull.Value ? (DateTime)reader["DateLastUpdate"] : null
+                        };
+
+                        result.Articles.Add(article);
+                    }
+                }
+
+                _logger.LogInformation($"Articles catalogue récupérés - Page {filter.Page}/{result.Pagination?.TotalPages}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erreur récupération articles catalogue");
+                result.Success = false;
+            }
+
+            return result;
+        }
+
+        // ════════════════════════════════════════════════════════════════════════════
+        // MÉTHODE 3: ARTICLE PAR ID
+        // ════════════════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Récupère un article spécifique du catalogue
+        /// </summary>
+        public async Task<CatalogueArticle?> GetArticlePublicAsync(Guid idArticle)
+        {
+            try
+            {
+                using var conn = await GetConnectionAsync();
+
+                using var cmd = new SqlCommand(@"
+                    SELECT TOP 1
+                        IdArticle,
+                        CodeArticle,
+                        NomArticle,
+                        DescriptionArticle,
+                        CodeBarre,
+                        PrixVente,
+                        PrixAchat,
+                        PrixExterieur,
+                        PrixPromo,
+                        EstPromo,
+                        Stock,
+                        SeuilAlerte,
+                        EstStockable,
+                        EstPos,
+                        AfficherStockPOS,
+                        ImageArticle,
+                        NomCategorie,
+                        IdCategorie,
+                        Position,
+                        TauxTva,
+                        DateCreate,
+                        DateLastUpdate
+                    FROM V_CATALOGUE_ARTICLES
+                    WHERE IdArticle = @IdArticle", conn)
+                {
+                    CommandTimeout = 10
+                };
+
+                cmd.Parameters.AddWithValue("@IdArticle", idArticle);
+
+                using var reader = await cmd.ExecuteReaderAsync();
+
+                if (await reader.ReadAsync())
+                {
+                    return new CatalogueArticle
+                    {
+                        IdArticle = (Guid)reader["IdArticle"],
+                        CodeArticle = reader["CodeArticle"]?.ToString(),
+                        NomArticle = reader["NomArticle"]?.ToString() ?? "",
+                        DescriptionArticle = reader["DescriptionArticle"]?.ToString(),
+                        CodeBarre = reader["CodeBarre"]?.ToString(),
+                        PrixVente = (decimal)reader["PrixVente"],
+                        PrixAchat = reader["PrixAchat"] != DBNull.Value ? (decimal)reader["PrixAchat"] : null,
+                        PrixExterieur = reader["PrixExterieur"] != DBNull.Value ? (decimal)reader["PrixExterieur"] : null,
+                        PrixPromo = reader["PrixPromo"] != DBNull.Value ? (decimal)reader["PrixPromo"] : null,
+                        EstPromo = reader["EstPromo"] != DBNull.Value && (bool)reader["EstPromo"],
+                        Stock = reader["Stock"] != DBNull.Value ? (decimal)reader["Stock"] : 0,
+                        SeuilAlerte = reader["SeuilAlerte"] != DBNull.Value ? (decimal)reader["SeuilAlerte"] : 0,
+                        EstStockable = reader["EstStockable"] != DBNull.Value && (bool)reader["EstStockable"],
+                        EstPos = reader["EstPos"] != DBNull.Value && (bool)reader["EstPos"],
+                        AfficherStockPOS = reader["AfficherStockPOS"] != DBNull.Value && (bool)reader["AfficherStockPOS"],
+                        ImageURL = reader["ImageArticle"]?.ToString(),
+                        NomCategorie = reader["NomCategorie"]?.ToString(),
+                        IdCategorie = reader["IdCategorie"] != DBNull.Value ? (Guid)reader["IdCategorie"] : Guid.Empty,
+                        Position = reader["Position"] != DBNull.Value ? (int)reader["Position"] : 0,
+                        TauxTva = reader["TauxTva"] != DBNull.Value ? (decimal)reader["TauxTva"] : 0,
+                        DateCreate = reader["DateCreate"] != DBNull.Value ? (DateTime)reader["DateCreate"] : null,
+                        DateLastUpdate = reader["DateLastUpdate"] != DBNull.Value ? (DateTime)reader["DateLastUpdate"] : null
+                    };
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Erreur récupération article catalogue {idArticle}");
+                return null;
+            }
+        }
+
+        // ════════════════════════════════════════════════════════════════════════════
+        // MÉTHODE 4: ARTICLES PAR CATÉGORIE
+        // ════════════════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Récupère les articles d'une catégorie spécifique
+        /// </summary>
+        public async Task<CatalogueArticlesResponseDto> GetArticlesByCategoryAsync(
+            Guid idCategorie, int page, int pageSize, string orderBy, string orderDirection)
+        {
+            var result = new CatalogueArticlesResponseDto { Success = true };
+
+            try
+            {
+                if (page < 1) page = 1;
+                if (pageSize < 1) pageSize = 20;
+                if (pageSize > 100) pageSize = 100;
+
+                using var conn = await GetConnectionAsync();
+
+                // Vérifier que la catégorie existe
+                using (var cmdCat = new SqlCommand(@"
+                    SELECT NomCategorie FROM V_CATALOGUE_CATEGORIES 
+                    WHERE IdCategorie = @IdCategorie", conn))
+                {
+                    cmdCat.Parameters.AddWithValue("@IdCategorie", idCategorie);
+                    var categoryName = await cmdCat.ExecuteScalarAsync();
+
+                    if (categoryName == null)
+                        return result; // Catégorie non trouvée
+
+                    result.CategoryName = categoryName.ToString();
+                }
+
+                // Compter articles
+                using (var cmdCount = new SqlCommand(@"
+                    SELECT COUNT(*) FROM V_CATALOGUE_ARTICLES 
+                    WHERE IdCategorie = @IdCategorie", conn))
+                {
+                    cmdCount.Parameters.AddWithValue("@IdCategorie", idCategorie);
+                    var totalCount = (int)await cmdCount.ExecuteScalarAsync();
+                    result.Total = totalCount;
+
+                    var totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+
+                    result.Pagination = new PaginationMetadata
+                    {
+                        CurrentPage = page,
+                        PageSize = pageSize,
+                        TotalPages = totalPages,
+                        TotalRecords = totalCount,
+                        HasPrevious = page > 1,
+                        HasNext = page < totalPages
+                    };
+                }
+
+                // Récupérer articles
+                var orderByClause = BuildOrderByArticles(orderBy);
+                var orderDir = orderDirection.ToLower() == "desc" ? "DESC" : "ASC";
+
+                using (var cmd = new SqlCommand($@"
+                    SELECT 
+                        IdArticle, CodeArticle, NomArticle, DescriptionArticle, CodeBarre,
+                        PrixVente, PrixPromo, EstPromo, Stock, EstStockable,
+                        AfficherStockPOS, ImageArticle, Position, TauxTva,
+                        DateCreate, DateLastUpdate
+                    FROM V_CATALOGUE_ARTICLES
+                    WHERE IdCategorie = @IdCategorie
+                    ORDER BY {orderByClause} {orderDir}
+                    OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY", conn))
+                {
+                    cmd.Parameters.AddWithValue("@IdCategorie", idCategorie);
+                    cmd.Parameters.AddWithValue("@Offset", (page - 1) * pageSize);
+                    cmd.Parameters.AddWithValue("@PageSize", pageSize);
+
+                    using var reader = await cmd.ExecuteReaderAsync();
+
+                    while (await reader.ReadAsync())
+                    {
+                        var article = new CatalogueArticle
+                        {
+                            IdArticle = (Guid)reader["IdArticle"],
+                            CodeArticle = reader["CodeArticle"]?.ToString(),
+                            NomArticle = reader["NomArticle"]?.ToString() ?? "",
+                            DescriptionArticle = reader["DescriptionArticle"]?.ToString(),
+                            CodeBarre = reader["CodeBarre"]?.ToString(),
+                            PrixVente = (decimal)reader["PrixVente"],
+                            PrixPromo = reader["PrixPromo"] != DBNull.Value ? (decimal)reader["PrixPromo"] : null,
+                            EstPromo = reader["EstPromo"] != DBNull.Value && (bool)reader["EstPromo"],
+                            Stock = reader["Stock"] != DBNull.Value ? (decimal)reader["Stock"] : 0,
+                            EstStockable = reader["EstStockable"] != DBNull.Value && (bool)reader["EstStockable"],
+                            AfficherStockPOS = reader["AfficherStockPOS"] != DBNull.Value && (bool)reader["AfficherStockPOS"],
+                            ImageURL = reader["ImageArticle"]?.ToString(),
+                            Position = reader["Position"] != DBNull.Value ? (int)reader["Position"] : 0,
+                            TauxTva = reader["TauxTva"] != DBNull.Value ? (decimal)reader["TauxTva"] : 0,
+                            DateCreate = reader["DateCreate"] != DBNull.Value ? (DateTime)reader["DateCreate"] : null,
+                            DateLastUpdate = reader["DateLastUpdate"] != DBNull.Value ? (DateTime)reader["DateLastUpdate"] : null
+                        };
+
+                        result.Articles.Add(article);
+                    }
+                }
+
+                result.Success = true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Erreur récupération articles catégorie {idCategorie}");
+                result.Success = false;
+            }
+
+            return result;
+        }
+
+        // ════════════════════════════════════════════════════════════════════════════
+        // MÉTHODES PRIVÉES D'AIDE
+        // ════════════════════════════════════════════════════════════════════════════
+
+        private string BuildCatalogueFilterClause(CatalogueArticleFilterRequest filter)
+        {
+            var conditions = new List<string>();
+
+            if (filter.IdCategorie.HasValue && filter.IdCategorie != Guid.Empty)
+                conditions.Add("IdCategorie = @IdCategorie");
+
+            if (!string.IsNullOrWhiteSpace(filter.SearchTerm))
+                conditions.Add("(NomArticle LIKE @SearchTerm OR CodeArticle LIKE @SearchTerm OR CodeBarre LIKE @SearchTerm)");
+
+            if (filter.EstPromo.HasValue)
+                conditions.Add("EstPromo = @EstPromo");
+
+            if (filter.PrixMin.HasValue)
+                conditions.Add("PrixVente >= @PrixMin");
+
+            if (filter.PrixMax.HasValue)
+                conditions.Add("PrixVente <= @PrixMax");
+
+            return conditions.Count == 0 ? "" : "AND " + string.Join(" AND ", conditions);
+        }
+
+        private void AddCatalogueFilterParameters(SqlCommand cmd, CatalogueArticleFilterRequest filter)
+        {
+            if (filter.IdCategorie.HasValue && filter.IdCategorie != Guid.Empty)
+                cmd.Parameters.AddWithValue("@IdCategorie", filter.IdCategorie.Value);
+
+            if (!string.IsNullOrWhiteSpace(filter.SearchTerm))
+                cmd.Parameters.AddWithValue("@SearchTerm", $"%{filter.SearchTerm}%");
+
+            if (filter.EstPromo.HasValue)
+                cmd.Parameters.AddWithValue("@EstPromo", filter.EstPromo.Value ? 1 : 0);
+
+            if (filter.PrixMin.HasValue)
+                cmd.Parameters.AddWithValue("@PrixMin", filter.PrixMin.Value);
+
+            if (filter.PrixMax.HasValue)
+                cmd.Parameters.AddWithValue("@PrixMax", filter.PrixMax.Value);
+        }
+
+        private string BuildOrderByCategories(string orderBy)
+        {
+            return orderBy.ToLower() switch
+            {
+                "nom" => "NomCategorie",
+                "articles" => "NombreArticles",
+                "prix" => "PrixMoyen",
+                _ => "OrdreCategorie"
+            };
+        }
+
+        private string BuildOrderByArticles(string orderBy)
+        {
+            return orderBy.ToLower() switch
+            {
+                "prix" => "PrixVente",
+                "categorie" => "NomCategorie",
+                "date" => "DateCreate",
+                "position" => "Position",
+                _ => "NomArticle"
+            };
+        }
 
         private ArticleDto MapArticleFromReader(SqlDataReader reader)
         {

@@ -256,19 +256,19 @@ Date et heure : {DateTime.UtcNow}.";
         {
             return $@"Bienvenue {userName}! 👋
  
-Nous sommes heureux de vous accueillir dans notre communauté! 🎉
+                Nous sommes heureux de vous accueillir dans notre communauté! 🎉
  
-📞 *Nous restons à votre écoute* à travers ce canal de communication WhatsApp pour:
-• Répondre à vos préoccupations
-• Vous aider au plus vite
-• Vous assister au mieux de nos capacités
+                📞 *Nous restons à votre écoute* à travers ce canal de communication WhatsApp pour:
+                • Répondre à vos préoccupations
+                • Vous aider au plus vite
+                • Vous assister au mieux de nos capacités
  
-✨ *Avantages de nous joindre par WhatsApp:*
-📱 Réponses rapides
-🎯 Support personnalisé
-🕐 Disponibilité étendue
+                ✨ *Avantages de nous joindre par WhatsApp:*
+                📱 Réponses rapides
+                🎯 Support personnalisé
+                🕐 Disponibilité étendue
  
-N'hésitez pas à nous envoyer vos questions! Nous sommes là pour vous! 😊";
+                N'hésitez pas à nous envoyer vos questions! Nous sommes là pour vous! 😊";
         }
 
         /// <summary>
@@ -350,5 +350,176 @@ N'hésitez pas à nous envoyer vos questions! Nous sommes là pour vous! 😊";
 
             return "***" + apiKey.Substring(apiKey.Length - 8);
         }
+
+
+        public class LigneCommandeWhatsApp
+        {
+            public string NomArticle { get; set; } = "";
+            public int Quantite { get; set; }
+            public decimal PrixUnitaire { get; set; }
+            public decimal SousTotal => PrixUnitaire * Quantite;
+        }
+
+        /// <summary>
+        /// [1] Notifie la BOUTIQUE d'une nouvelle commande à traiter.
+        /// À appeler EN PREMIER lors de la validation d'une commande.
+        /// </summary>
+        /// <param name="toPhoneBoutique">Numéro WhatsApp de la boutique (ex: TelephoneBoutique, format 2250725691200)</param>
+        /// <param name="nomBoutique">Nom de la boutique</param>
+        /// <param name="clientWhatsApp">Numéro WhatsApp du client (normalisé, ex: 2250725691200)</param>
+        /// <param name="lignes">Lignes de la commande</param>
+        /// <param name="total">Total de la commande</param>
+        /// <param name="livraisonTexte">Adresse/complément texte (optionnel)</param>
+        /// <param name="livraisonLat">Latitude GPS (optionnel)</param>
+        /// <param name="livraisonLng">Longitude GPS (optionnel)</param>
+        /// <returns>true si envoyé avec succès, false sinon</returns>
+        public async Task<bool> SendNotificationNouvelleCommandeAsync(
+            string toPhoneBoutique,
+            string nomBoutique,
+            string clientWhatsApp,
+            List<LigneCommandeWhatsApp> lignes,
+            decimal total,
+            string? livraisonTexte = null,
+            double? livraisonLat = null,
+            double? livraisonLng = null)
+        {
+            try
+            {
+                var message = BuildNotificationNouvelleCommandeMessage(
+                    nomBoutique, clientWhatsApp, lignes, total, livraisonTexte, livraisonLat, livraisonLng);
+
+                var success = await SendWhatsAppMessageAsync(toPhoneBoutique, message);
+
+                if (success)
+                {
+                    Console.WriteLine($"✅ Notification nouvelle commande envoyée à la boutique {toPhoneBoutique}");
+                }
+
+                return success;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Erreur SendNotificationNouvelleCommandeAsync à {toPhoneBoutique}: {ex.Message}");
+                Console.WriteLine($"   Stack: {ex.StackTrace}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// [2] Confirme au CLIENT que sa commande a été prise en compte (avec reçu détaillé).
+        /// À appeler UNIQUEMENT si SendNotificationNouvelleCommandeAsync a retourné true.
+        /// </summary>
+        /// <param name="toPhoneClient">Numéro WhatsApp du client (normalisé, ex: 2250725691200)</param>
+        /// <param name="nomBoutique">Nom de la boutique</param>
+        /// <param name="lignes">Lignes de la commande (même liste que pour la boutique)</param>
+        /// <param name="total">Total de la commande</param>
+        /// <returns>true si envoyé avec succès, false sinon</returns>
+        public async Task<bool> SendConfirmationCommandeClientAsync(
+            string toPhoneClient,
+            string nomBoutique,
+            List<LigneCommandeWhatsApp> lignes,
+            decimal total)
+        {
+            try
+            {
+                var message = BuildConfirmationCommandeClientMessage(nomBoutique, lignes, total);
+
+                var success = await SendWhatsAppMessageAsync(toPhoneClient, message);
+
+                if (success)
+                {
+                    Console.WriteLine($"✅ Confirmation commande envoyée au client {toPhoneClient}");
+                }
+
+                return success;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Erreur SendConfirmationCommandeClientAsync à {toPhoneClient}: {ex.Message}");
+                Console.WriteLine($"   Stack: {ex.StackTrace}");
+                return false;
+            }
+        }
+
+        // ── À ajouter DANS la classe, section MÉTHODES PRIVÉES (constructeurs de messages) ──
+
+        /// <summary>
+        /// Construit le message de notification de nouvelle commande pour la boutique
+        /// </summary>
+        private string BuildNotificationNouvelleCommandeMessage(
+            string nomBoutique,
+            string clientWhatsApp,
+            List<LigneCommandeWhatsApp> lignes,
+            decimal total,
+            string? livraisonTexte,
+            double? livraisonLat,
+            double? livraisonLng)
+        {
+            var sb = new StringBuilder();
+
+            sb.AppendLine($"🛒 *Nouvelle commande reçue* — {nomBoutique}");
+            sb.AppendLine();
+            sb.AppendLine($"👤 Client WhatsApp : +{clientWhatsApp}");
+            sb.AppendLine();
+            sb.AppendLine("📦 *Articles commandés :*");
+
+            foreach (var ligne in lignes)
+            {
+                sb.AppendLine($"• {ligne.Quantite} x {ligne.NomArticle} — {ligne.PrixUnitaire:N0} FCFA = {ligne.SousTotal:N0} FCFA");
+            }
+
+            sb.AppendLine();
+            sb.AppendLine($"💰 *Total : {total:N0} FCFA*");
+            sb.AppendLine();
+            sb.AppendLine("📍 *Livraison :*");
+
+            if (!string.IsNullOrWhiteSpace(livraisonTexte))
+                sb.AppendLine(livraisonTexte);
+
+            if (livraisonLat.HasValue && livraisonLng.HasValue)
+                sb.AppendLine($"🗺️ https://www.google.com/maps?q={livraisonLat.Value},{livraisonLng.Value}");
+
+            if (string.IsNullOrWhiteSpace(livraisonTexte) && !livraisonLat.HasValue)
+                sb.AppendLine("Non précisée");
+
+            sb.AppendLine();
+            sb.AppendLine("➡️ Rendez-vous sur votre interface pour traiter cette commande. Actualisez la page si elle n'apparaît pas immédiatement.");
+
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Construit le message de confirmation/reçu pour le client
+        /// </summary>
+        private string BuildConfirmationCommandeClientMessage(
+            string nomBoutique,
+            List<LigneCommandeWhatsApp> lignes,
+            decimal total)
+        {
+            var sb = new StringBuilder();
+
+            sb.AppendLine($"✅ *Commande confirmée* — {nomBoutique}");
+            sb.AppendLine();
+            sb.AppendLine("Merci pour votre commande ! Voici votre reçu :");
+            sb.AppendLine();
+            sb.AppendLine("📦 *Détail de votre commande :*");
+
+            foreach (var ligne in lignes)
+            {
+                sb.AppendLine($"• {ligne.Quantite} x {ligne.NomArticle} — {ligne.PrixUnitaire:N0} FCFA");
+            }
+
+            sb.AppendLine();
+            sb.AppendLine($"💰 *Total : {total:N0} FCFA*");
+            sb.AppendLine();
+            sb.AppendLine($"{nomBoutique} va traiter votre commande sous peu. Vous serez recontacté(e) via ce numéro WhatsApp.");
+            sb.AppendLine();
+            sb.AppendLine("Merci de votre confiance ! 🙏");
+
+            return sb.ToString();
+
+
+        }
+
     }
-}
+    }

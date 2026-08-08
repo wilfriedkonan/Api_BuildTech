@@ -1,66 +1,58 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
-using System.Text;
-
+﻿// Controllers - Articles & Stock
+using Api_BuildTech.Controllers.Articles;
+using Api_BuildTech.Controllers.ArticleStock;
+// Controllers - Authentification & Registration
+using Api_BuildTech.Controllers.Authentication;
+using Api_BuildTech.Controllers.AutresMagasin;
+using Api_BuildTech.Controllers.Boutique;
+using Api_BuildTech.Controllers.Categorie;
+using Api_BuildTech.Controllers.CategorieComposants;
+// Controllers - Gestion Métier
+using Api_BuildTech.Controllers.Clients;
+// Controllers - Articles & Composants
+using Api_BuildTech.Controllers.Composants;
+using Api_BuildTech.Controllers.CompositionArticle;
+using Api_BuildTech.Controllers.DetailLivraisons;
+using Api_BuildTech.Controllers.DetailTransactions;
+using Api_BuildTech.Controllers.DomaineRestaurant;
+using Api_BuildTech.Controllers.Ecommerce;
+using Api_BuildTech.Controllers.Entreprise;
+// Controllers - Factures & Transactions
+using Api_BuildTech.Controllers.Factures;
+using Api_BuildTech.Controllers.Fournisseurs;
+using Api_BuildTech.Controllers.Livraisons;
+// Controllers - Livraison
+using Api_BuildTech.Controllers.Livreur;
+// Controllers - Stock & Matières Premières
+using Api_BuildTech.Controllers.MatierePremiere;
+using Api_BuildTech.Controllers.ModelRecu;
+using Api_BuildTech.Controllers.MouvementStock;
+using Api_BuildTech.Controllers.Organisation;
+using Api_BuildTech.Controllers.Otp;
+using Api_BuildTech.Controllers.Paiments;
+using Api_BuildTech.Controllers.ParametrePos;
+using Api_BuildTech.Controllers.Plans;
+using Api_BuildTech.Controllers.POS;
+using Api_BuildTech.Controllers.Registration;
+using Api_BuildTech.Controllers.Serveur;
+using Api_BuildTech.Controllers.Sessions;
+using Api_BuildTech.Controllers.Statistics;
+using Api_BuildTech.Controllers.Subscription;
+using Api_BuildTech.Controllers.Synchronisation;
+// Controllers - Restaurant & Tables
+using Api_BuildTech.Controllers.Table;
+using Api_BuildTech.Controllers.TypePaiement;
+// Controllers - Configuration
+using Api_BuildTech.Controllers.TypeServices;
+using Api_BuildTech.Controllers.UniteMesures;
+using Api_BuildTech.Controllers.Users;
 // Services de base
 using Api_BuildTech.Services;
 using Api_BuildTech.Services.messagerie;
-
-// Controllers - Articles & Stock
-using Api_BuildTech.Controllers.Articles;
-using Api_BuildTech.Controllers.ArticleStock;
-using Api_BuildTech.Controllers.Categorie;
-
-// Controllers - Gestion Métier
-using Api_BuildTech.Controllers.Clients;
-using Api_BuildTech.Controllers.Fournisseurs;
-using Api_BuildTech.Controllers.Organisation;
-using Api_BuildTech.Controllers.Entreprise;
-using Api_BuildTech.Controllers.Users;
-
-// Controllers - Restaurant & Tables
-using Api_BuildTech.Controllers.Table;
-using Api_BuildTech.Controllers.Serveur;
-using Api_BuildTech.Controllers.Sessions;
-using Api_BuildTech.Controllers.DomaineRestaurant;
-
-// Controllers - Configuration
-using Api_BuildTech.Controllers.TypeServices;
-using Api_BuildTech.Controllers.TypePaiement;
-using Api_BuildTech.Controllers.UniteMesures;
-using Api_BuildTech.Controllers.ParametrePos;
-using Api_BuildTech.Controllers.ModelRecu;
-
-// Controllers - Factures & Transactions
-using Api_BuildTech.Controllers.Factures;
-using Api_BuildTech.Controllers.DetailTransactions;
-using Api_BuildTech.Controllers.Paiments;
-using Api_BuildTech.Controllers.POS;
-
-// Controllers - Articles & Composants
-using Api_BuildTech.Controllers.Composants;
-using Api_BuildTech.Controllers.CategorieComposants;
-using Api_BuildTech.Controllers.CompositionArticle;
-
-// Controllers - Stock & Matières Premières
-using Api_BuildTech.Controllers.MatierePremiere;
-using Api_BuildTech.Controllers.MouvementStock;
-using Api_BuildTech.Controllers.AutresMagasin;
-
-// Controllers - Livraison
-using Api_BuildTech.Controllers.Livreur;
-using Api_BuildTech.Controllers.Livraisons;
-using Api_BuildTech.Controllers.DetailLivraisons;
-
-// Controllers - Authentification & Registration
-using Api_BuildTech.Controllers.Authentication;
-using Api_BuildTech.Controllers.Registration;
-using Api_BuildTech.Controllers.Otp;
-using Api_BuildTech.Controllers.Subscription;
-using Api_BuildTech.Controllers.Plans;
-using Api_BuildTech.Controllers.Synchronisation;
-using Api_BuildTech.Controllers.Statistics;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
+using System.Text;
 
 // ============================================================================
 // CONSTRUCTION DE L'APPLICATION
@@ -456,6 +448,26 @@ builder.Services.AddScoped<DetailLivraisonsService>(sp =>
     ));
 
 // ============================================================================
+// BOUTIQUE - Service admin (multi-tenant, Authorize)
+// ============================================================================
+builder.Services.AddScoped<BoutiqueService>(sp =>
+    new BoutiqueService(
+        connectionString,
+        sp.GetRequiredService<ILogger<BoutiqueService>>(),
+        sp.GetRequiredService<IHttpContextAccessor>()
+    ));
+
+// ============================================================================
+// BOUTIQUE - Service public (QR/Slug/Catalogue, AllowAnonymous)
+// Pas de IHttpContextAccessor : ce service ne doit JAMAIS filtrer par tenant
+// ============================================================================
+builder.Services.AddScoped<BoutiquePublicService>(sp =>
+    new BoutiquePublicService(
+        connectionString,
+        sp.GetRequiredService<ILogger<BoutiquePublicService>>()
+    ));
+
+// ============================================================================
 // 17. INJECTION DE DÉPENDANCES - PLANS & SUBSCRIPTION
 // ============================================================================
 
@@ -477,6 +489,24 @@ builder.Services.AddScoped<RegistrationOrchestrator>(sp =>
         sp.GetRequiredService<SmtpEmailService>(),
         sp.GetRequiredService<IConfiguration>(),
         sp.GetRequiredService<OtpService>()
+    ));
+// ============================================================================
+// COMMANDES E-COMMERCE - Service admin/POS (multi-tenant, Authorize)
+// ============================================================================
+builder.Services.AddScoped<Ecommerceservice>(sp =>
+    new Ecommerceservice(
+        connectionString,
+        sp.GetRequiredService<ILogger<Ecommerceservice>>(),
+        sp.GetRequiredService<IHttpContextAccessor>()
+    ));
+
+// ============================================================================
+// COMMANDES E-COMMERCE - Service public (création commande, AllowAnonymous)
+// ============================================================================
+builder.Services.AddScoped<EcommercePublicService>(sp =>
+    new EcommercePublicService(
+        connectionString,
+        sp.GetRequiredService<ILogger<EcommercePublicService>>()
     ));
 
 // ============================================================================
