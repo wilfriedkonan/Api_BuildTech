@@ -34,6 +34,7 @@ using Api_BuildTech.Controllers.ParametrePos;
 using Api_BuildTech.Controllers.Plans;
 using Api_BuildTech.Controllers.POS;
 using Api_BuildTech.Controllers.Registration;
+using Api_BuildTech.Controllers.Roles;
 using Api_BuildTech.Controllers.Serveur;
 using Api_BuildTech.Controllers.Sessions;
 using Api_BuildTech.Controllers.Statistics;
@@ -229,6 +230,12 @@ builder.Services.AddScoped<UsersService>(sp =>
         sp.GetRequiredService<IHttpContextAccessor>()
     ));
 
+builder.Services.AddScoped<RolesService>(sp =>
+    new RolesService(
+        connectionString,
+        sp.GetRequiredService<ILogger<RolesService>>(),
+        sp.GetRequiredService<IHttpContextAccessor>()
+    ));
 // ============================================================================
 // 8. INJECTION DE DÉPENDANCES - GESTION ARTICLES & CATÉGORIES
 // ============================================================================

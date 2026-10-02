@@ -2965,6 +2965,16 @@
     "ReturnTypes": []
   },
   {
+    "ContainingType": "Api_BuildTech.Controllers.Roles.RolesController",
+    "Method": "GetAll",
+    "RelativePath": "api/Roles",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "Api_BuildTech.Controllers.Serveur.ServeurController",
     "Method": "GetAll",
     "RelativePath": "api/Serveur",

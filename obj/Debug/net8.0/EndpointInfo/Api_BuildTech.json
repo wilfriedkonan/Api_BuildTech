@@ -5049,6 +5049,18 @@
         }
       }
     },
+    "/api/Roles": {
+      "get": {
+        "tags": [
+          "Roles"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/Serveur": {
       "get": {
         "tags": [
@@ -7646,6 +7658,10 @@
             "type": "string",
             "nullable": true
           },
+          "telephone": {
+            "type": "string",
+            "nullable": true
+          },
           "idEntreprise": {
             "type": "string",
             "format": "uuid"
@@ -8785,6 +8801,10 @@
             "nullable": true
           },
           "prenom": {
+            "type": "string",
+            "nullable": true
+          },
+          "telephone": {
             "type": "string",
             "nullable": true
           },

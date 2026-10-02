@@ -59,6 +59,17 @@ namespace Api_BuildTech.Controllers.Users
                 if (string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Password))
                     return BadRequest(new { success = false, message = "Email et Password requis" });
 
+                // ── Vérification limite d'abonnement (sauf pour un SuperAdmin créateur) ──
+                var isSuperAdminCreateur = User.IsInRole("SuperAdmin");
+
+                if (!isSuperAdminCreateur)
+                {
+                    var (autorise, messageLimite) = await _usersService.VerifierLimiteAbonnementAsync(request.IdEntreprise);
+
+                    if (!autorise)
+                        return BadRequest(new { success = false, message = messageLimite });
+                }
+
                 var user = await _usersService.CreateAsync(request);
                 if (user == null)
                     return StatusCode(500, new { success = false, message = "Erreur création" });
@@ -72,7 +83,6 @@ namespace Api_BuildTech.Controllers.Users
                 return StatusCode(500, new { success = false, message = "Erreur serveur" });
             }
         }
-
         [HttpPut("{id}")]
         [Authorize(Roles = "Owner,Manager,SuperAdmin")]
         public async Task<IActionResult> Update(Guid id, [FromBody] UpdateUserRequest request)

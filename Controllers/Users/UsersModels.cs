@@ -6,6 +6,7 @@
         public string Email { get; set; } = string.Empty;
         public string? Nom { get; set; }
         public string? Prenom { get; set; }
+        public string? Telephone { get; set; }
         public Guid IdEntreprise { get; set; }
         public string? NomEntreprise { get; set; }
         public Guid? IdRole { get; set; }
@@ -22,6 +23,7 @@
         public string Password { get; set; } = string.Empty;
         public string? Nom { get; set; }
         public string? Prenom { get; set; }
+        public string? Telephone { get; set; }
         public Guid IdEntreprise { get; set; }
         public Guid? IdRole { get; set; }
     }
@@ -31,6 +33,7 @@
         public string? Email { get; set; }
         public string? Nom { get; set; }
         public string? Prenom { get; set; }
+        public string? Telephone { get; set; }
         public Guid? IdRole { get; set; }
         public bool? IsActive { get; set; }
     }

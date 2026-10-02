@@ -2026,8 +2026,10 @@ namespace Api_BuildTech.Controllers.POS
                 f.Designation,
                 f.Sous_total,
                 f.ValeurTVA,
-                f.Total_final
+                f.Total_final,
+                u.Nom AS NomUtilisateur
             FROM FACTURE f
+            LEFT JOIN UTILISATEURS u ON f.idUtilisateur = u.Id
             WHERE f.IdEntreprise = @IdEntreprise
             AND CAST(f.DateCreation AS DATE) >= @DateDebut
             AND CAST(f.DateCreation AS DATE) <= @DateFin
@@ -2053,7 +2055,8 @@ namespace Api_BuildTech.Controllers.POS
                             Date = reader.GetDateTime(0),
                             NumeroFacture = ReadNullableString(reader, "NumeroFacture") ?? "-",
                             Designation = ReadNullableString(reader, "Designation") ?? "-",
-                            MontantTotal = montant
+                            MontantTotal = montant,
+                            NomUtilisateur = ReadNullableString(reader, "NomUtilisateur")
                         });
 
                         sousTotal += reader.GetDecimal(3);

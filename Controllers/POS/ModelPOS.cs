@@ -605,6 +605,7 @@ public class RapportVentesLigneDto
     public string NumeroFacture { get; set; }
     public string Designation { get; set; }
     public decimal MontantTotal { get; set; }
+    public string? NomUtilisateur { get; set; }
 }
 
 /// <summary>

@@ -25,7 +25,7 @@ namespace Api_BuildTech.Controllers.Users
                 var whereClause = BuildWhereClause("u");
 
                 using var cmd = new SqlCommand($@"
-                    SELECT u.Id, u.Email, u.Nom, u.Prenom, u.IdEntreprise, u.IdRole,
+                    SELECT u.Id, u.Email, u.Nom, u.Prenom, u.Telephone, u.IdEntreprise, u.IdRole,
                            u.IsSuperAdmin, u.IsActive, u.LastLoginAt, u.CreatedAt,
                            e.Designation AS NomEntreprise, r.Name AS RoleName
                     FROM UTILISATEURS u
@@ -64,7 +64,7 @@ namespace Api_BuildTech.Controllers.Users
                 var whereClause = BuildWhereClause("u");
 
                 using var cmd = new SqlCommand($@"
-                    SELECT u.Id, u.Email, u.Nom, u.Prenom, u.IdEntreprise, u.IdRole,
+                    SELECT u.Id, u.Email, u.Nom, u.Prenom, u.Telephone, u.IdEntreprise, u.IdRole,
                            u.IsSuperAdmin, u.IsActive, u.LastLoginAt, u.CreatedAt,
                            e.Designation AS NomEntreprise, r.Name AS RoleName
                     FROM UTILISATEURS u
@@ -104,11 +104,11 @@ namespace Api_BuildTech.Controllers.Users
 
                 using var cmd = new SqlCommand(@"
                     INSERT INTO UTILISATEURS (
-                        Id, Email, MotDePasse, Nom, Prenom, IdEntreprise, IdRole,
+                        Id, Email, MotDePasse, Nom, Prenom, Telephone, IdEntreprise, IdRole,
                         IsSuperAdmin, IsActive, CreatedAt
                     )
                     VALUES (
-                        @Id, @Email, @MotDePasse, @Nom, @Prenom, @IdEntreprise, @IdRole,
+                        @Id, @Email, @MotDePasse, @Nom, @Prenom, @Telephone, @IdEntreprise, @IdRole,
                         0, 1, GETUTCDATE()
                     )", conn);
 
@@ -117,6 +117,7 @@ namespace Api_BuildTech.Controllers.Users
                 cmd.Parameters.AddWithValue("@MotDePasse", hashedPassword);
                 AddParameter(cmd, "@Nom", request.Nom);
                 AddParameter(cmd, "@Prenom", request.Prenom);
+                AddParameter(cmd, "@Telephone", request.Telephone);
                 cmd.Parameters.AddWithValue("@IdEntreprise", request.IdEntreprise);
                 AddParameter(cmd, "@IdRole", request.IdRole);
 
@@ -147,6 +148,7 @@ namespace Api_BuildTech.Controllers.Users
                     SET Email = COALESCE(@Email, Email),
                         Nom = COALESCE(@Nom, Nom),
                         Prenom = COALESCE(@Prenom, Prenom),
+                        Telephone = COALESCE(@Telephone, Telephone),
                         IdRole = COALESCE(@IdRole, IdRole),
                         IsActive = COALESCE(@IsActive, IsActive),
                         UpdatedAt = GETUTCDATE()
@@ -156,6 +158,7 @@ namespace Api_BuildTech.Controllers.Users
                 AddParameter(cmd, "@Email", request.Email);
                 AddParameter(cmd, "@Nom", request.Nom);
                 AddParameter(cmd, "@Prenom", request.Prenom);
+                AddParameter(cmd, "@Telephone", request.Telephone);
                 AddParameter(cmd, "@IdRole", request.IdRole);
                 AddParameter(cmd, "@IsActive", request.IsActive);
                 AddEntrepriseParameter(cmd);
@@ -202,7 +205,66 @@ namespace Api_BuildTech.Controllers.Users
                 return false;
             }
         }
+        public async Task<(bool Autorise, string? Message)> VerifierLimiteAbonnementAsync(Guid idEntreprise)
+        {
+            try
+            {
+                using var conn = await GetConnectionAsync();
 
+                // ── Récupérer l'abonnement actif en cours (Status='Active' + dans la période) ──
+                int maxUsers;
+                string planName;
+
+                using (var cmdPlan = new SqlCommand(@"
+            SELECT TOP 1 p.MaxUsers, p.Name
+            FROM SUBSCRIPTIONS s
+            INNER JOIN PLANS p ON s.IdPlan = p.Id
+            WHERE s.IdEntreprise = @IdEntreprise
+              AND s.Status = 'Active'
+              AND s.StartDate <= GETUTCDATE()
+              AND s.EndDate >= GETUTCDATE()
+              AND p.IsActive = 1
+            ORDER BY s.StartDate DESC", conn))
+                {
+                    cmdPlan.Parameters.AddWithValue("@IdEntreprise", idEntreprise);
+
+                    using var reader = await cmdPlan.ExecuteReaderAsync();
+                    if (!await reader.ReadAsync())
+                    {
+                        // Aucun abonnement actif et valide trouvé → blocage total
+                        return (false, "Aucun abonnement actif trouvé pour cette entreprise. Veuillez souscrire à un plan avant de créer un utilisateur.");
+                    }
+
+                    maxUsers = reader.GetInt32(0);
+                    planName = reader.GetString(1);
+                }
+
+                // ── Compter tous les utilisateurs actifs de l'entreprise (SuperAdmin inclus) ──
+                int currentCount;
+                using (var cmdCount = new SqlCommand(@"
+            SELECT COUNT(*)
+            FROM UTILISATEURS
+            WHERE IdEntreprise = @IdEntreprise
+              AND IsActive = 1", conn))
+                {
+                    cmdCount.Parameters.AddWithValue("@IdEntreprise", idEntreprise);
+                    currentCount = (int)await cmdCount.ExecuteScalarAsync();
+                }
+
+                if (currentCount >= maxUsers)
+                {
+                    return (false, $"Limite de {maxUsers} utilisateurs atteinte pour le plan \"{planName}\". Veuillez mettre à niveau votre abonnement.");
+                }
+
+                return (true, null);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Erreur vérification limite abonnement pour entreprise {idEntreprise}");
+                // En cas d'erreur technique, on bloque par prudence plutôt que de laisser passer
+                return (false, "Impossible de vérifier l'abonnement actuellement. Réessayez.");
+            }
+        }
         private UserDto MapToDto(SqlDataReader reader)
         {
             return new UserDto
@@ -211,12 +273,13 @@ namespace Api_BuildTech.Controllers.Users
                 Email = reader.GetString(1),
                 Nom = ReadNullableString(reader, "Nom"),
                 Prenom = ReadNullableString(reader, "Prenom"),
-                IdEntreprise = reader.GetGuid(4),
+                Telephone = ReadNullableString(reader, "Telephone"),
+                IdEntreprise = reader.GetGuid(reader.GetOrdinal("IdEntreprise")),
                 IdRole = ReadNullableGuid(reader, "IdRole"),
-                IsSuperAdmin = reader.GetBoolean(6),
-                IsActive = reader.GetBoolean(7),
+                IsSuperAdmin = reader.GetBoolean(reader.GetOrdinal("IsSuperAdmin")),
+                IsActive = reader.GetBoolean(reader.GetOrdinal("IsActive")),
                 LastLoginAt = ReadNullableDateTime(reader, "LastLoginAt"),
-                CreatedAt = reader.GetDateTime(9),
+                CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
                 NomEntreprise = ReadNullableString(reader, "NomEntreprise"),
                 RoleName = ReadNullableString(reader, "RoleName")
             };
