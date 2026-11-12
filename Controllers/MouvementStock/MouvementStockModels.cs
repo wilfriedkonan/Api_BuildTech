@@ -1,7 +1,7 @@
 ﻿namespace Api_BuildTech.Controllers.MouvementStock
 {
     /// <summary>
-    /// DTO Mouvement de Stock
+    /// DTO Mouvement de Stock (colonnes de dbo.MOUVEMENT_STOCK)
     /// </summary>
     public class MouvementStockDto
     {
@@ -11,20 +11,42 @@
         public decimal? Quantite { get; set; }
         public decimal? PrixUnitaire { get; set; }
         public decimal? Montant { get; set; }
+        public decimal? PrixTotal { get; set; }
         public string? Reference { get; set; }
         public string? Commentaire { get; set; }
         public string? Motif { get; set; }
+
+        // Etat du mouvement ("Supprimer" = suppression logique ; la table n'a pas de colonne EstSupprimer)
+        public string? Etat { get; set; }
+        /// <summary>Conserve pour les clients existants : calcule a partir de Etat.</summary>
+        public bool? EstSupprimer => Etat == null ? null : string.Equals(Etat, "Supprimer", StringComparison.OrdinalIgnoreCase);
+
+        // Stock avant / apres le mouvement
+        public decimal? QuantiteAvant { get; set; }
+        public decimal? QuantiteApres { get; set; }
+        public decimal? QuanteStockage { get; set; }
+
+        // Indicateurs
+        public bool? EstAvarier { get; set; }
+        public bool? EstGater { get; set; }
+        public bool? EstMouvementMatierePremiere { get; set; }
+
+        // Liens
         public Guid? IdArticle { get; set; }
         public Guid? IdMatierePremiere { get; set; }
         public Guid? IdStock { get; set; }
         public Guid? IdAutresMag { get; set; }
         public Guid? IdEntreprise { get; set; }
-        public string? ReferenceParentMvt { get; set; }
-        public bool? EstSupprimer { get; set; }
+        public Guid? IdDetailTransaction { get; set; }
+        public Guid? IdUtilisateur { get; set; }          // colonne idUtilsateur (faute d'origine dans la table)
+        public Guid? ReferenceParentMvt { get; set; }     // uniqueidentifier en base
+        public Guid? IdMachine { get; set; }
+        public int? IdentifientMachine { get; set; }
+        public string? Utilisateur { get; set; }
 
         // Relations
         public string? NomArticle { get; set; }
-        public string? NomMatiere { get; set; }
+        public string? NomMatiere { get; set; }           // non renseigne (table matiere premiere non fournie)
     }
 
     /// <summary>
@@ -32,16 +54,17 @@
     /// </summary>
     public class CreateMouvementStockRequest
     {
-        public DateTime? DateTransaction { get; set; }
-        public string TypeMouvement { get; set; } = string.Empty; // "Entree" ou "Sortie"
+        public DateTime? DateTransaction { get; set; }    // absent : date du jour
+        public string TypeMouvement { get; set; } = string.Empty; // "Entree" ou "Sortie" (autres libelles convertis : Entrée stock, Sortie Vente, Vente...)
         public decimal Quantite { get; set; }
         public decimal PrixUnitaire { get; set; }
         public string? Reference { get; set; }
         public string? Commentaire { get; set; }
         public string? Motif { get; set; }
-        
+
         public Guid? IdArticle { get; set; }
         public Guid? IdStock { get; set; }
+        /// <summary>Ignore : l'entreprise vient toujours du jeton de l'utilisateur connecte.</summary>
         public Guid IdEntreprise { get; set; }
     }
 
@@ -54,7 +77,6 @@
         public decimal? PrixUnitaire { get; set; }
         public string? Commentaire { get; set; }
         public string? Motif { get; set; }
-        
     }
 
     /// <summary>
@@ -85,7 +107,6 @@
         public decimal SoldeValeur { get; set; }
         public List<MouvementStockDto> Mouvements { get; set; } = new();
 
-        // ✅ AJOUTÉ : Pagination
         public PaginationMetadata? Pagination { get; set; }
     }
 }

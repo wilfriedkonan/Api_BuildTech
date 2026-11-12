@@ -19,12 +19,34 @@ namespace Api_BuildTech.Controllers.MouvementStock
             _logger = logger;
         }
 
+        /// <summary>
+        /// Liste paginee des mouvements.
+        /// GET api/MouvementStock?page=1&pageSize=20&dateDebut=2026-11-01&dateFin=2026-11-06&typeMouvement=Sortie
+        /// Reponse : { success, total, totalEntrees, ..., mouvements[], pagination{ currentPage, pageSize, totalPages, totalRecords, hasPrevious, hasNext } }
+        /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetAll([FromQuery] DateTime? dateDebut = null, [FromQuery] DateTime? dateFin = null)
+        public async Task<IActionResult> GetAll(
+            [FromQuery] DateTime? dateDebut = null,
+            [FromQuery] DateTime? dateFin = null,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20,
+            [FromQuery] string? typeMouvement = null)
         {
             try
             {
-                var result = await _mouvementService.GetAllAsync(dateDebut, dateFin);
+                if (dateDebut.HasValue && dateFin.HasValue && dateDebut.Value > dateFin.Value)
+                    return BadRequest(new { success = false, message = "La date de début doit être antérieure à la date de fin" });
+
+                // Bornes de pagination (le service les applique aussi : pageSize 1..100)
+                if (page < 1) page = 1;
+                if (pageSize < 1) pageSize = 20;
+                if (pageSize > 100) pageSize = 100;
+
+                var result = await _mouvementService.GetAllAsync(dateDebut, dateFin, page, pageSize, typeMouvement?.Trim());
+
+                if (!result.Success)
+                    return StatusCode(500, new { success = false, message = "Erreur serveur" });
+
                 return Ok(result);
             }
             catch (Exception ex)

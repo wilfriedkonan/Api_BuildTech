@@ -5,6 +5,14 @@ namespace Api_BuildTech.Controllers.Statistics
 {
     public class StatisticsService : DatabaseService
     {
+        /// <summary>
+        /// Factures prises en compte dans TOUTES les statistiques - meme regle que les rapports POS
+        /// (PosService) pour que tableau de bord et rapports donnent les memes chiffres.
+        /// Pour ne compter que les ventes payees, ajouter : AND Etat = 'Payé'
+        /// (ISNULL : tolere les anciennes lignes dont EstAnnuler / EstSupprimer sont encore NULL).
+        /// </summary>
+        private const string FiltreFacture = "ISNULL(EstAnnuler, 0) = 0 AND ISNULL(EstSupprimer, 0) = 0";
+
         public StatisticsService(
             string connectionString,
             ILogger<StatisticsService> logger,
@@ -16,7 +24,7 @@ namespace Api_BuildTech.Controllers.Statistics
         /// <summary>
         /// Obtenir les données du dashboard (activité + graphique)
         /// </summary>
-        public async Task<DashboardResponseDto> GetDashboardDataAsync(string period = "7days")
+        public async Task<DashboardResponseDto> GetDashboardDataAsync(string period = "7days", bool inclureActivite = true, bool inclureGraphique = true)
         {
             Guid idEntreprise = GetEntrepriseIdFromContext();
             try
@@ -24,13 +32,17 @@ namespace Api_BuildTech.Controllers.Statistics
                 _logger.LogInformation($"📊 Chargement dashboard pour entreprise {idEntreprise}, période: {period}");
 
                 // Récupérer les données brutes
-                var rawData = await GetRawStatisticsAsync(idEntreprise);
-
-                // Calculer les statistiques d'activité
-                var activityData = CalculateActivityData(rawData);
+                ActivityDataDto activityData = null;
+                if (inclureActivite)
+                {
+                    var rawData = await GetRawStatisticsAsync(idEntreprise);
+                    activityData = CalculateActivityData(rawData);
+                }
 
                 // Récupérer les données du graphique
-                var chartData = await GetChartDataAsync(idEntreprise, period);
+                var chartData = inclureGraphique
+                    ? await GetChartDataAsync(idEntreprise, period)
+                    : new List<SalesChartDataDto>();
 
                 var response = new DashboardResponseDto
                 {
@@ -56,68 +68,68 @@ namespace Api_BuildTech.Controllers.Statistics
             try
             {
                 var today = DateTime.Now.Date;
-                var startOfWeek = today.AddDays(-(int)today.DayOfWeek + 1); // Lundi
+                var startOfWeek = today.AddDays(-(((int)today.DayOfWeek + 6) % 7)); // Lundi de la semaine courante (dimanche inclus)
                 var startOfMonth = new DateTime(today.Year, today.Month, 1);
                 var startOfLastMonth = startOfMonth.AddMonths(-1);
                 var endOfLastMonth = startOfMonth.AddDays(-1);
 
-                const string query = @"
+                var query = @"
                     SELECT 
                         -- Ventes
                         (SELECT COUNT(DISTINCT id) FROM FACTURE 
-                            WHERE IdEntreprise = @IdEntreprise AND Etat = 'Payé' AND EstAnnuler = 0 
+                            WHERE IdEntreprise = @IdEntreprise AND {F} 
                             AND CAST(DateCreation AS DATE) = @Today) AS SalesToday,
                         
                         (SELECT COUNT(DISTINCT id) FROM FACTURE 
-                            WHERE IdEntreprise = @IdEntreprise AND Etat = 'Payé' AND EstAnnuler = 0 
+                            WHERE IdEntreprise = @IdEntreprise AND {F} 
                             AND CAST(DateCreation AS DATE) >= @StartOfWeek AND CAST(DateCreation AS DATE) <= @Today) AS SalesThisWeek,
                         
                         (SELECT COUNT(DISTINCT id) FROM FACTURE 
-                            WHERE IdEntreprise = @IdEntreprise AND Etat = 'Payé' AND EstAnnuler = 0 
+                            WHERE IdEntreprise = @IdEntreprise AND {F} 
                             AND CAST(DateCreation AS DATE) >= @StartOfMonth) AS SalesThisMonth,
                         
                         (SELECT COUNT(DISTINCT id) FROM FACTURE 
-                            WHERE IdEntreprise = @IdEntreprise AND Etat = 'Payé' AND EstAnnuler = 0 
+                            WHERE IdEntreprise = @IdEntreprise AND {F} 
                             AND CAST(DateCreation AS DATE) >= @StartOfLastMonth AND CAST(DateCreation AS DATE) <= @EndOfLastMonth) AS SalesLastMonth,
                         
                         -- Revenus
                         (SELECT ISNULL(SUM(Total_final), 0) FROM FACTURE 
-                            WHERE IdEntreprise = @IdEntreprise AND Etat = 'Payé' AND EstAnnuler = 0 
+                            WHERE IdEntreprise = @IdEntreprise AND {F} 
                             AND CAST(DateCreation AS DATE) = @Today) AS RevenuesToday,
                         
                         (SELECT ISNULL(SUM(Total_final), 0) FROM FACTURE 
-                            WHERE IdEntreprise = @IdEntreprise AND Etat = 'Payé' AND EstAnnuler = 0 
+                            WHERE IdEntreprise = @IdEntreprise AND {F} 
                             AND CAST(DateCreation AS DATE) >= @StartOfWeek AND CAST(DateCreation AS DATE) <= @Today) AS RevenuesThisWeek,
                         
                         (SELECT ISNULL(SUM(Total_final), 0) FROM FACTURE 
-                            WHERE IdEntreprise = @IdEntreprise AND Etat = 'Payé' AND EstAnnuler = 0 
+                            WHERE IdEntreprise = @IdEntreprise AND {F} 
                             AND CAST(DateCreation AS DATE) >= @StartOfMonth) AS RevenuesThisMonth,
                         
                         (SELECT ISNULL(SUM(Total_final), 0) FROM FACTURE 
-                            WHERE IdEntreprise = @IdEntreprise AND Etat = 'Payé' AND EstAnnuler = 0 
+                            WHERE IdEntreprise = @IdEntreprise AND {F} 
                             AND CAST(DateCreation AS DATE) >= @StartOfLastMonth AND CAST(DateCreation AS DATE) <= @EndOfLastMonth) AS RevenuesLastMonth,
                         
                         -- Clients (factures uniques)
                         (SELECT COUNT(DISTINCT id) FROM FACTURE 
-                            WHERE IdEntreprise = @IdEntreprise AND Etat = 'Payé' AND EstAnnuler = 0) AS TotalClients,
+                            WHERE IdEntreprise = @IdEntreprise AND {F}) AS TotalClients,
                         
                         (SELECT COUNT(DISTINCT id) FROM FACTURE 
-                            WHERE IdEntreprise = @IdEntreprise AND Etat = 'Payé' AND EstAnnuler = 0 
+                            WHERE IdEntreprise = @IdEntreprise AND {F} 
                             AND CAST(DateCreation AS DATE) >= @StartOfMonth) AS NewClientsThisMonth,
                         
                         (SELECT COUNT(DISTINCT id) FROM FACTURE 
-                            WHERE IdEntreprise = @IdEntreprise AND Etat = 'Payé' AND EstAnnuler = 0 
+                            WHERE IdEntreprise = @IdEntreprise AND {F} 
                             AND CAST(DateCreation AS DATE) < @StartOfMonth) AS ReturningClientsThisMonth,
                         
                         (SELECT COUNT(DISTINCT id) FROM FACTURE 
-                            WHERE IdEntreprise = @IdEntreprise AND Etat = 'Payé' AND EstAnnuler = 0 
+                            WHERE IdEntreprise = @IdEntreprise AND {F} 
                             AND CAST(DateCreation AS DATE) >= @StartOfLastMonth AND CAST(DateCreation AS DATE) <= @EndOfLastMonth) AS ClientsLastMonth,
                         
                         -- Stock
                         (SELECT COUNT(*) FROM ARTICLES WHERE IdEntreprise = @IdEntreprise) AS TotalProducts,
-                        (SELECT COUNT(*) FROM STOCK WHERE IdEntreprise = @IdEntreprise AND Quanté < 10 AND Quanté > 0) AS LowStockProducts,
-                        (SELECT COUNT(*) FROM STOCK WHERE IdEntreprise = @IdEntreprise AND Quanté = 0) AS OutOfStockProducts
-                ";
+                        (SELECT COUNT(*) FROM V_STOCK_ARTICLES_ENTREPRISE WHERE IdEntreprise = @IdEntreprise AND StatutStock = 'STOCK FAIBLE') AS LowStockProducts,
+                        (SELECT COUNT(*) FROM V_STOCK_ARTICLES_ENTREPRISE WHERE IdEntreprise = @IdEntreprise AND StatutStock = 'RUPTURE') AS OutOfStockProducts
+                ".Replace("{F}", FiltreFacture);
 
                 using (var connection = new SqlConnection(_connectionString))
                 {
@@ -143,10 +155,10 @@ namespace Api_BuildTech.Controllers.Statistics
                                     SalesThisWeek = reader.IsDBNull(1) ? 0 : reader.GetInt32(1),
                                     SalesThisMonth = reader.IsDBNull(2) ? 0 : reader.GetInt32(2),
                                     SalesLastMonth = reader.IsDBNull(3) ? 0 : reader.GetInt32(3),
-                                    RevenuesToday = reader.IsDBNull(4) ? 0 : reader.GetDecimal(4),
-                                    RevenuesThisWeek = reader.IsDBNull(5) ? 0 : reader.GetDecimal(5),
-                                    RevenuesThisMonth = reader.IsDBNull(6) ? 0 : reader.GetDecimal(6),
-                                    RevenuesLastMonth = reader.IsDBNull(7) ? 0 : reader.GetDecimal(7),
+                                    RevenuesToday = ReadDec(reader, 4),
+                                    RevenuesThisWeek = ReadDec(reader, 5),
+                                    RevenuesThisMonth = ReadDec(reader, 6),
+                                    RevenuesLastMonth = ReadDec(reader, 7),
                                     TotalClients = reader.IsDBNull(8) ? 0 : reader.GetInt32(8),
                                     NewClientsThisMonth = reader.IsDBNull(9) ? 0 : reader.GetInt32(9),
                                     ReturningClientsThisMonth = reader.IsDBNull(10) ? 0 : reader.GetInt32(10),
@@ -169,6 +181,10 @@ namespace Api_BuildTech.Controllers.Statistics
             }
         }
 
+        /// <summary>Lecture decimale securisee : float / int / decimal, NULL => 0.</summary>
+        private static decimal ReadDec(SqlDataReader reader, int i)
+            => reader.IsDBNull(i) ? 0m : Convert.ToDecimal(reader.GetValue(i));
+
         /// <summary>
         /// Calculer les données d'activité
         /// </summary>
@@ -183,7 +199,7 @@ namespace Api_BuildTech.Controllers.Statistics
                 : 0;
 
             var clientsGrowth = raw.ClientsLastMonth > 0
-                ? ((raw.TotalClients - raw.ClientsLastMonth) / (decimal)raw.ClientsLastMonth) * 100
+                ? ((raw.NewClientsThisMonth - raw.ClientsLastMonth) / (decimal)raw.ClientsLastMonth) * 100
                 : 0;
 
             return new ActivityDataDto
@@ -236,21 +252,20 @@ namespace Api_BuildTech.Controllers.Statistics
                     _ => 7
                 };
 
-                var startDate = today.AddDays(-daysToShow);
+                var startDate = today.AddDays(-(daysToShow - 1));
 
-                const string query = @"
+                var query = @"
                     SELECT 
                         CAST(DateCreation AS DATE) as SaleDate,
                         COUNT(DISTINCT id) as SalesCount,
                         ISNULL(SUM(Total_final), 0) as TotalRevenue
                     FROM FACTURE
                     WHERE IdEntreprise = @IdEntreprise 
-                        AND Etat = 'Payé' 
-                        AND EstAnnuler = 0
+                        AND {F}
                         AND CAST(DateCreation AS DATE) >= @StartDate
                     GROUP BY CAST(DateCreation AS DATE)
                     ORDER BY CAST(DateCreation AS DATE)
-                ";
+                ".Replace("{F}", FiltreFacture);
 
                 using (var connection = new SqlConnection(_connectionString))
                 {
@@ -270,7 +285,7 @@ namespace Api_BuildTech.Controllers.Statistics
                                 {
                                     Date = saleDate.ToString("dd/MM"),
                                     Sales = reader.GetInt32(1),
-                                    Revenue = reader.GetDecimal(2)
+                                    Revenue = ReadDec(reader, 2)
                                 });
                             }
                         }

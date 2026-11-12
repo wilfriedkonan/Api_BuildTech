@@ -31,16 +31,13 @@ namespace Api_BuildTech.Controllers.POS
         /// POST - Créer une nouvelle facture POS
         /// </summary>
         [HttpPost("factures")]
-        [Authorize(Roles = "Owner,Manager,Serveur,SuperAdmin")]
+        [Authorize(Roles = "Owner,Manager,Waiter,Cashier,SuperAdmin")]
         public async Task<IActionResult> CreateFacture([FromBody] CreatePosFactureRequest request)
         {
             try
             {
                 if (string.IsNullOrEmpty(request.NumeroFacture))
                     return BadRequest(new { success = false, message = "NumeroFacture requis" });
-
-                if (request.IdEntreprise == Guid.Empty)
-                    return BadRequest(new { success = false, message = "IdEntreprise requis" });
 
                 var facture = await _posService.CreateFactureAsync(request);
 
@@ -68,7 +65,7 @@ namespace Api_BuildTech.Controllers.POS
         /// <summary>
         /// GET - Récupère une facture complète avec ses détails
         /// </summary>
-        [HttpGet("factures/{id}")]
+        [HttpGet("factures/{id:guid}")]
         public async Task<IActionResult> GetFactureComplete(Guid id)
         {
             try
@@ -95,7 +92,7 @@ namespace Api_BuildTech.Controllers.POS
         /// POST - Ajouter un détail (ligne) à une facture POS
         /// </summary>
         [HttpPost("factures/{idFacture}/details")]
-        [Authorize(Roles = "Owner,Manager,Serveur,SuperAdmin")]
+        [Authorize(Roles = "Owner,Manager,Waiter,Cashier,SuperAdmin")]
         public async Task<IActionResult> AddDetailToFacture(
             Guid idFacture,
             [FromBody] AddPosDetailRequest request)
@@ -107,6 +104,9 @@ namespace Api_BuildTech.Controllers.POS
 
                 if (request.Quantite <= 0)
                     return BadRequest(new { success = false, message = "Quantité doit être > 0" });
+
+                if (!await _posService.FactureExisteAsync(idFacture))
+                    return NotFound(new { success = false, message = "Facture introuvable" });
 
                 var detail = await _posService.AddDetailToFactureAsync(idFacture, request);
 
@@ -166,7 +166,7 @@ namespace Api_BuildTech.Controllers.POS
         ///    Résultat: Facture mise en attente
         /// </summary>
         [HttpPut("put-on-hold")]
-        [Authorize(Roles = "Owner,Manager,Serveur,SuperAdmin")]
+        [Authorize(Roles = "Owner,Manager,Waiter,Cashier,SuperAdmin")]
         public async Task<IActionResult> PutOnHoldSmart([FromBody] PutOnHoldSmartRequest request)
         {
             try
@@ -182,6 +182,10 @@ namespace Api_BuildTech.Controllers.POS
 
                     if (request.Articles == null || request.Articles.Count == 0)
                         return BadRequest(new { success = false, message = "CAS 1 : Articles requis" });
+
+                    var erreurArticles = ValiderArticles(request.Articles);
+                    if (erreurArticles != null)
+                        return BadRequest(new { success = false, message = erreurArticles });
 
                     var response = await _posService.CreateAndPutOnHoldAsync(request);
 
@@ -213,14 +217,14 @@ namespace Api_BuildTech.Controllers.POS
         /// ⚠️ Utiliser plutôt PUT /put-on-hold (endpoint intelligent)
         /// </summary>
         [HttpPut("factures/{idFacture}/put-on-hold")]
-        [Authorize(Roles = "Owner,Manager,Serveur,SuperAdmin")]
+        [Authorize(Roles = "Owner,Manager,Waiter,Cashier,SuperAdmin")]
         public async Task<IActionResult> PutOnHold(
             Guid idFacture,
             [FromBody] PutPosOnHoldRequest request)
         {
             try
             {
-                var facture = await _posService.PutOnHoldAsync(idFacture, request.Motif);
+                var facture = await _posService.PutOnHoldAsync(idFacture, request?.Motif);
 
                 if (facture == null)
                     return NotFound(new { success = false, message = "Facture introuvable" });
@@ -249,8 +253,13 @@ namespace Api_BuildTech.Controllers.POS
             {
                 var result = await _posService.GetAllOnHoldAsync();
 
+                if (!result.Success)
+                    return StatusCode(500, new { success = false, message = "Erreur serveur" });
+
                 return Ok(new
                 {
+                    success = true,
+                    total = result.Total,
                     data = result
                 });
             }
@@ -265,7 +274,7 @@ namespace Api_BuildTech.Controllers.POS
         /// PUT - Reprendre une facture en attente
         /// </summary>
         [HttpPut("factures/{idFacture}/resume")]
-        [Authorize(Roles = "Owner,Manager,Serveur,SuperAdmin")]
+        [Authorize(Roles = "Owner,Manager,Waiter,Cashier,SuperAdmin")]
         public async Task<IActionResult> ResumeFacture(Guid idFacture)
         {
             try
@@ -300,7 +309,7 @@ namespace Api_BuildTech.Controllers.POS
         {
             try
             {
-                var facture = await _posService.CancelFactureAsync(idFacture, request.Motif);
+                var facture = await _posService.CancelFactureAsync(idFacture, request?.Motif);
 
                 if (facture == null)
                     return NotFound(new { success = false, message = "Facture introuvable" });
@@ -382,7 +391,7 @@ namespace Api_BuildTech.Controllers.POS
         /// ✅ Crée automatiquement les mouvements de stock dans les 2 cas
         /// </summary>
         [HttpPost("confirm-payment")]
-        [Authorize(Roles = "Owner,Manager,Serveur,SuperAdmin")]
+        [Authorize(Roles = "Owner,Manager,Waiter,Cashier,SuperAdmin")]
         public async Task<IActionResult> ConfirmPayment([FromBody] ConfirmPosPaymentRequest request)
         {
             try
@@ -393,6 +402,9 @@ namespace Api_BuildTech.Controllers.POS
 
                 if (request.MontantVerser < 0)
                     return BadRequest(new { success = false, message = "MontantVerser invalide" });
+
+                if (request.MonnaieRemis < 0 || request.Remise < 0)
+                    return BadRequest(new { success = false, message = "MonnaieRemis / Remise invalides" });
 
                 // Déterminer le cas
                 bool isCaseOne = request.IdFacture == null || request.IdFacture == Guid.Empty;
@@ -405,6 +417,10 @@ namespace Api_BuildTech.Controllers.POS
 
                     if (request.Articles == null || request.Articles.Count == 0)
                         return BadRequest(new { success = false, message = "CAS 1 : Articles requis" });
+
+                    var erreurArticles = ValiderArticles(request.Articles);
+                    if (erreurArticles != null)
+                        return BadRequest(new { success = false, message = erreurArticles });
 
                     var response = await _posService.CreateAndPayFactureAsync(request);
 
@@ -419,7 +435,14 @@ namespace Api_BuildTech.Controllers.POS
                     var response = await _posService.PayExistingFactureAsync(request);
 
                     if (!response.Success)
-                        return StatusCode(404, response);
+                    {
+                        return response.ErrorCode switch
+                        {
+                            "NOT_FOUND" => NotFound(response),
+                            "ALREADY_PAID" or "CANCELLED" => Conflict(response),
+                            _ => StatusCode(500, response)
+                        };
+                    }
 
                     return Ok(response);
                 }
@@ -446,7 +469,7 @@ namespace Api_BuildTech.Controllers.POS
         /// ⚡ Performance: <30ms (une seule requête SQL)
         /// </summary>
         [HttpGet("statistiques/jour")]
-        [Authorize(Roles = "Owner,Manager,Caissier,SuperAdmin")]
+        [Authorize(Roles = "Owner,Manager,Cashier,SuperAdmin")]
         public async Task<IActionResult> GetStatistiquesJourAsync()
         {
             try
@@ -490,6 +513,9 @@ namespace Api_BuildTech.Controllers.POS
             {
                 var debut = dateDebut ?? new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
                 var fin = dateFin ?? DateTime.Now;
+                if (debut > fin)
+                    return BadRequest(new { success = false, message = "La date de début doit être antérieure à la date de fin" });
+                if (page < 1) page = 1;
 
                 _logger.LogInformation($"📊 Rapport Ventes: {debut:yyyy-MM-dd} à {fin:yyyy-MM-dd}, Page {page}");
 
@@ -546,6 +572,9 @@ namespace Api_BuildTech.Controllers.POS
             {
                 var debut = dateDebut ?? new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
                 var fin = dateFin ?? DateTime.Now;
+                if (debut > fin)
+                    return BadRequest(new { success = false, message = "La date de début doit être antérieure à la date de fin" });
+                if (page < 1) page = 1;
 
                 _logger.LogInformation($"📊 Rapport Ventes Quantité: {debut:yyyy-MM-dd} à {fin:yyyy-MM-dd}, Page {page}");
 
@@ -633,28 +662,22 @@ namespace Api_BuildTech.Controllers.POS
         }
 
         // ════════════════════════════════════════════════════════════════════════════
-        // Méthodes privées pour générer les PDFs
+        // Validation commune des lignes d'articles (mise en attente + paiement CAS 1)
         // ════════════════════════════════════════════════════════════════════════════
 
-        private async Task<byte[]> GenerateRapportVentesPDFAsync(RapportVentesDto rapport)
+        private static string? ValiderArticles(List<AddPosDetailRequest> articles)
         {
-            // À implémenter avec PdfSharp
-            await Task.Delay(100);
-            return new byte[0];
-        }
-
-        private async Task<byte[]> GenerateRapportVentesQuantitePDFAsync(RapportVentesQuantiteDto rapport)
-        {
-            // À implémenter
-            await Task.Delay(100);
-            return new byte[0];
-        }
-
-        private async Task<byte[]> GenerateRapportStockPDFAsync(RapportStockDto rapport)
-        {
-            // À implémenter
-            await Task.Delay(100);
-            return new byte[0];
+            for (var i = 0; i < articles.Count; i++)
+            {
+                var a = articles[i];
+                if (a.IdArticle == Guid.Empty)
+                    return $"Article {i + 1} : IdArticle requis";
+                if (a.Quantite <= 0)
+                    return $"Article {i + 1} : la quantité doit être > 0";
+                if (a.PrixUnitaireHT < 0 || a.TauxTVA < 0 || a.valeurRemise < 0)
+                    return $"Article {i + 1} : prix, TVA ou remise négatifs";
+            }
+            return null;
         }
     }
 }

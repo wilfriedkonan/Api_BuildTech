@@ -1,4 +1,4 @@
-﻿namespace Api_BuildTech.Controllers.Synchronisation
+namespace Api_BuildTech.Controllers.Synchronisation
 {
     public class CDCChange
     {
@@ -34,8 +34,12 @@
     /// </summary>
     public class SyncRequest
     {
-        public string ApiKey { get; set; }
-        public Guid IdEntreprise { get; set; }
+        public string? ApiKey { get; set; }          // cle de l'entreprise (l'en-tete X-Sync-Key est preferable)
+        public Guid IdEntreprise { get; set; }       // controle seulement : l'entreprise reelle vient de la cle
+        public Guid? ChangeId { get; set; }          // Id du CDC_CHANGES local : cle d'idempotence (a envoyer !)
+        public DateTime? CreatedDate { get; set; }   // UTC, date de la modification sur la caisse
+        public long? Version { get; set; }
+        public long? PreviousVersion { get; set; }
         public string TableName { get; set; }
         public Guid RecordId { get; set; }
         public string Operation { get; set; }
@@ -50,6 +54,8 @@
     public class SyncResponse
     {
         public bool Success { get; set; }
+        // APPLIED | DUPLICATE (Success = true) ; CONFLICT | REJECTED (Success = false, definitif) ; RETRY (HTTP 503)
+        public string? Status { get; set; }
         public string Message { get; set; }
         public DateTime Timestamp { get; set; } = DateTime.UtcNow;
         public Guid? ChangeId { get; set; }
@@ -74,7 +80,7 @@
     /// </summary>
     public class GetPendingChangesRequest
     {
-        public string ApiKey { get; set; }
+        public string? ApiKey { get; set; }
         public Guid IdEntreprise { get; set; }
         public DateTime Since { get; set; }
         public int MaxResults { get; set; } = 100;
@@ -122,10 +128,32 @@
     /// </summary>
     public class MarkSyncedRequest
     {
-        public string ApiKey { get; set; }
+        public string? ApiKey { get; set; }
         public Guid ChangeId { get; set; }
         public bool Success { get; set; }
+        public bool Retry { get; set; }              // true : ne pas compter comme un echec (ex. parent pas encore arrive)
         public string? ErrorMessage { get; set; }
+    }
+
+    /// <summary>Lot de changements caisse -> hub (max 100 ; POST api/Sync/apply-batch).</summary>
+    public class ApplyBatchRequest
+    {
+        public string? ApiKey { get; set; }
+        public List<SyncRequest> Changes { get; set; } = new List<SyncRequest>();
+    }
+
+    public class ApplyBatchItemResult
+    {
+        public Guid ChangeId { get; set; }
+        public string Status { get; set; } = "";     // APPLIED | DUPLICATE | CONFLICT | REJECTED | RETRY
+        public string? Message { get; set; }
+    }
+
+    /// <summary>Acquittements hub -> caisse par lot (max 200 ; POST api/Sync/ack-batch).</summary>
+    public class AckBatchRequest
+    {
+        public string? ApiKey { get; set; }
+        public List<MarkSyncedRequest> Items { get; set; } = new List<MarkSyncedRequest>();
     }
 
     /// <summary>

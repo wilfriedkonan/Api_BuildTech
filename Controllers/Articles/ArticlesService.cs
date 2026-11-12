@@ -120,7 +120,7 @@ namespace Api_BuildTech.Controllers.Articles
                         u1.Nom + ' ' + ISNULL(u1.Prenom, '') AS NomCreateUser,
                         u2.Nom + ' ' + ISNULL(u2.Prenom, '') AS NomLastUpdateUser
                     FROM ARTICLES a
-                    LEFT JOIN CATHEGORIE c ON a.IdCathegorie = c.Id
+                    LEFT JOIN CATEGORIE c ON a.IdCathegorie = c.Id
                     LEFT JOIN UTILISATEURS u1 ON a.idCreateUser = u1.Id
                     LEFT JOIN UTILISATEURS u2 ON a.idLastUpdateUser = u2.Id
                     WHERE ISNULL(a.Etat, 'Actif') != 'Supprimer' {whereClause}
@@ -166,59 +166,59 @@ namespace Api_BuildTech.Controllers.Articles
         {
             var result = new ArticleListResponse { Success = true };
 
-            try
-            {
-                // Validation
-                if (filter.Page < 1) filter.Page = 1;
-                if (filter.PageSize < 1) filter.PageSize = 20;
-                if (filter.PageSize > 100) filter.PageSize = 100;
+            //try
+            //{
+            // Validation
+            if (filter.Page < 1) filter.Page = 1;
+            if (filter.PageSize < 1) filter.PageSize = 20;
+            if (filter.PageSize > 100) filter.PageSize = 100;
 
-                using var conn = await GetConnectionAsync();
+            using var conn = await GetConnectionAsync();
 
-                // ════════════════════════════════════════════════════════════════════════════
-                // ÉTAPE 1: COMPTER LE TOTAL (avant pagination)
-                // ════════════════════════════════════════════════════════════════════════════
+            // ════════════════════════════════════════════════════════════════════════════
+            // ÉTAPE 1: COMPTER LE TOTAL (avant pagination)
+            // ════════════════════════════════════════════════════════════════════════════
 
-                var whereClause = BuildWhereClause("a");
-                var filterClause = BuildFilterClause(filter);
+            var whereClause = BuildWhereClause("a");
+            var filterClause = BuildFilterClause(filter);
 
-                using (var cmdCount = new SqlCommand($@"
+            using (var cmdCount = new SqlCommand($@"
                     SELECT COUNT(*) as Total
                     FROM ARTICLES a
-                    LEFT JOIN CATHEGORIE c ON a.IdCathegorie = c.Id
+                    LEFT JOIN CATEGORIE c ON a.IdCathegorie = c.Id
                     WHERE ISNULL(a.Etat, 'Actif') != 'Supprimer' 
                     {whereClause}
                     {filterClause}", conn))
+            {
+                AddEntrepriseParameter(cmdCount);
+                AddFilterParameters(cmdCount, filter);
+
+                var totalCount = (int)await cmdCount.ExecuteScalarAsync();
+                result.Total = totalCount;
+
+                // Calculer pagination
+                var totalPages = (int)Math.Ceiling((double)totalCount / filter.PageSize);
+                var offset = (filter.Page - 1) * filter.PageSize;
+
+                result.Pagination = new PaginationMetadata
                 {
-                    AddEntrepriseParameter(cmdCount);
-                    AddFilterParameters(cmdCount, filter);
+                    CurrentPage = filter.Page,
+                    PageSize = filter.PageSize,
+                    TotalPages = totalPages,
+                    TotalRecords = totalCount,
+                    HasPrevious = filter.Page > 1,
+                    HasNext = filter.Page < totalPages
+                };
+            }
 
-                    var totalCount = (int)await cmdCount.ExecuteScalarAsync();
-                    result.Total = totalCount;
+            // ════════════════════════════════════════════════════════════════════════════
+            // ÉTAPE 2: RÉCUPÉRER LES ARTICLES (avec pagination et tri)
+            // ════════════════════════════════════════════════════════════════════════════
 
-                    // Calculer pagination
-                    var totalPages = (int)Math.Ceiling((double)totalCount / filter.PageSize);
-                    var offset = (filter.Page - 1) * filter.PageSize;
+            var orderByClause = BuildOrderByClause(filter);
+            var offset2 = (filter.Page - 1) * filter.PageSize;
 
-                    result.Pagination = new PaginationMetadata
-                    {
-                        CurrentPage = filter.Page,
-                        PageSize = filter.PageSize,
-                        TotalPages = totalPages,
-                        TotalRecords = totalCount,
-                        HasPrevious = filter.Page > 1,
-                        HasNext = filter.Page < totalPages
-                    };
-                }
-
-                // ════════════════════════════════════════════════════════════════════════════
-                // ÉTAPE 2: RÉCUPÉRER LES ARTICLES (avec pagination et tri)
-                // ════════════════════════════════════════════════════════════════════════════
-
-                var orderByClause = BuildOrderByClause(filter);
-                var offset2 = (filter.Page - 1) * filter.PageSize;
-
-                using (var cmd = new SqlCommand($@"
+            using (var cmd = new SqlCommand($@"
                     SELECT 
                         a.Id, a.CodeArticle, a.Designation, a.Description, a.CodeBarre,
                         a.PrixAchat, a.PrixVente, a.PrixExterieur, a.EstPos, a.Position,
@@ -234,7 +234,7 @@ namespace Api_BuildTech.Controllers.Articles
                         u1.Nom + ' ' + ISNULL(u1.Prenom, '') AS NomCreateUser,
                         u2.Nom + ' ' + ISNULL(u2.Prenom, '') AS NomLastUpdateUser
                     FROM ARTICLES a
-                    LEFT JOIN CATHEGORIE c ON a.IdCathegorie = c.Id
+                    LEFT JOIN CATEGORIE c ON a.IdCathegorie = c.Id
                     LEFT JOIN UTILISATEURS u1 ON a.idCreateUser = u1.Id
                     LEFT JOIN UTILISATEURS u2 ON a.idLastUpdateUser = u2.Id
                     WHERE ISNULL(a.Etat, 'Actif') != 'Supprimer' 
@@ -242,46 +242,46 @@ namespace Api_BuildTech.Controllers.Articles
                     {filterClause}
                     {orderByClause}
                     OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY", conn))
-                {
-                    AddEntrepriseParameter(cmd);
-                    AddFilterParameters(cmd, filter);
-                    cmd.Parameters.AddWithValue("@Offset", offset2);
-                    cmd.Parameters.AddWithValue("@PageSize", filter.PageSize);
-
-                    using var reader = await cmd.ExecuteReaderAsync();
-
-                    while (await reader.ReadAsync())
-                    {
-                        var article = MapArticleFromReader(reader);
-                        result.Articles.Add(article);
-                    }
-                }
-
-                // ════════════════════════════════════════════════════════════════════════════
-                // ÉTAPE 3: CALCULER LE STOCK ACTUEL (pour articles stockables)
-                // ════════════════════════════════════════════════════════════════════════════
-
-                foreach (var article in result.Articles.Where(a => a.EstStockable == true))
-                {
-                    article.StockActuel = await CalculateStockActuelAsync(article.Id);
-
-                    // Vérifier alerte stock
-                    if (article.SeuilAlerte.HasValue && article.StockActuel < article.SeuilAlerte.Value)
-                    {
-                        article.AlerteStock = true;
-                        result.TotalEnAlerte++;
-                    }
-
-                    result.TotalStockables++;
-                }
-
-                _logger.LogInformation($"Articles récupérés - Page {filter.Page}/{result.Pagination?.TotalPages}, Total: {result.Total}");
-            }
-            catch (Exception ex)
             {
-                _logger.LogError(ex, "Erreur récupération articles avec pagination");
-                result.Success = false;
+                AddEntrepriseParameter(cmd);
+                AddFilterParameters(cmd, filter);
+                cmd.Parameters.AddWithValue("@Offset", offset2);
+                cmd.Parameters.AddWithValue("@PageSize", filter.PageSize);
+
+                using var reader = await cmd.ExecuteReaderAsync();
+
+                while (await reader.ReadAsync())
+                {
+                    var article = MapArticleFromReader(reader);
+                    result.Articles.Add(article);
+                }
             }
+
+            // ════════════════════════════════════════════════════════════════════════════
+            // ÉTAPE 3: CALCULER LE STOCK ACTUEL (pour articles stockables)
+            // ════════════════════════════════════════════════════════════════════════════
+
+            foreach (var article in result.Articles.Where(a => a.EstStockable == true))
+            {
+                article.StockActuel = await CalculateStockActuelAsync(article.Id);
+
+                // Vérifier alerte stock
+                if (article.SeuilAlerte.HasValue && article.StockActuel < article.SeuilAlerte.Value)
+                {
+                    article.AlerteStock = true;
+                    result.TotalEnAlerte++;
+                }
+
+                result.TotalStockables++;
+            }
+
+            _logger.LogInformation($"Articles récupérés - Page {filter.Page}/{result.Pagination?.TotalPages}, Total: {result.Total}");
+            //}
+            //catch (Exception ex)
+            //{
+            //    _logger.LogError(ex, "Erreur récupération articles avec pagination");
+            //    result.Success = false;
+            //}
 
             return result;
         }
@@ -451,7 +451,7 @@ namespace Api_BuildTech.Controllers.Articles
                         u1.Nom + ' ' + ISNULL(u1.Prenom, '') AS NomCreateUser,
                         u2.Nom + ' ' + ISNULL(u2.Prenom, '') AS NomLastUpdateUser
                     FROM ARTICLES a
-                    LEFT JOIN CATHEGORIE c ON a.IdCathegorie = c.Id
+                    LEFT JOIN CATEGORIE c ON a.IdCathegorie = c.Id
                     LEFT JOIN UTILISATEURS u1 ON a.idCreateUser = u1.Id
                     LEFT JOIN UTILISATEURS u2 ON a.idLastUpdateUser = u2.Id
                     WHERE a.Id = @Id {whereClause}", conn);
@@ -513,7 +513,7 @@ namespace Api_BuildTech.Controllers.Articles
                         u1.Nom + ' ' + ISNULL(u1.Prenom, '') AS NomCreateUser,
                         u2.Nom + ' ' + ISNULL(u2.Prenom, '') AS NomLastUpdateUser
                     FROM ARTICLES a
-                    LEFT JOIN CATHEGORIE c ON a.IdCathegorie = c.Id
+                    LEFT JOIN CATEGORIE c ON a.IdCathegorie = c.Id
                     LEFT JOIN UTILISATEURS u1 ON a.idCreateUser = u1.Id
                     LEFT JOIN UTILISATEURS u2 ON a.idLastUpdateUser = u2.Id
                     WHERE a.CodeBarre = @CodeBarre {whereClause}", conn);
@@ -576,7 +576,7 @@ namespace Api_BuildTech.Controllers.Articles
                         u1.Nom + ' ' + ISNULL(u1.Prenom, '') AS NomCreateUser,
                         u2.Nom + ' ' + ISNULL(u2.Prenom, '') AS NomLastUpdateUser
                     FROM ARTICLES a
-                    LEFT JOIN CATHEGORIE c ON a.IdCathegorie = c.Id
+                    LEFT JOIN CATEGORIE c ON a.IdCathegorie = c.Id
                     LEFT JOIN UTILISATEURS u1 ON a.idCreateUser = u1.Id
                     LEFT JOIN UTILISATEURS u2 ON a.idLastUpdateUser = u2.Id
                     WHERE a.IdCathegorie = @IdCategorie 
@@ -646,7 +646,7 @@ namespace Api_BuildTech.Controllers.Articles
                         u1.Nom + ' ' + ISNULL(u1.Prenom, '') AS NomCreateUser,
                         u2.Nom + ' ' + ISNULL(u2.Prenom, '') AS NomLastUpdateUser
                     FROM ARTICLES a
-                    LEFT JOIN CATHEGORIE c ON a.IdCathegorie = c.Id
+                    LEFT JOIN CATEGORIE c ON a.IdCathegorie = c.Id
                     LEFT JOIN UTILISATEURS u1 ON a.idCreateUser = u1.Id
                     LEFT JOIN UTILISATEURS u2 ON a.idLastUpdateUser = u2.Id
                     WHERE a.EstPos = 1 
@@ -715,7 +715,7 @@ namespace Api_BuildTech.Controllers.Articles
                         u1.Nom + ' ' + ISNULL(u1.Prenom, '') AS NomCreateUser,
                         u2.Nom + ' ' + ISNULL(u2.Prenom, '') AS NomLastUpdateUser
                     FROM ARTICLES a
-                    LEFT JOIN CATHEGORIE c ON a.IdCathegorie = c.Id
+                    LEFT JOIN CATEGORIE c ON a.IdCathegorie = c.Id
                     LEFT JOIN UTILISATEURS u1 ON a.idCreateUser = u1.Id
                     LEFT JOIN UTILISATEURS u2 ON a.idLastUpdateUser = u2.Id
                     WHERE a.EstPromo = 1 
@@ -784,7 +784,7 @@ namespace Api_BuildTech.Controllers.Articles
         //                u1.Nom + ' ' + ISNULL(u1.Prenom, '') AS NomCreateUser,
         //                u2.Nom + ' ' + ISNULL(u2.Prenom, '') AS NomLastUpdateUser
         //            FROM ARTICLES a
-        //            LEFT JOIN CATHEGORIE c ON a.IdCathegorie = c.Id
+        //            LEFT JOIN CATEGORIE c ON a.IdCathegorie = c.Id
         //            LEFT JOIN UTILISATEURS u1 ON a.idCreateUser = u1.Id
         //            LEFT JOIN UTILISATEURS u2 ON a.idLastUpdateUser = u2.Id
         //            WHERE a.EstStockable = 1 
@@ -1694,7 +1694,7 @@ namespace Api_BuildTech.Controllers.Articles
                             EstPromo = reader["EstPromo"] != DBNull.Value && (bool)reader["EstPromo"],
                             Stock = reader["Stock"] != DBNull.Value ? (decimal)reader["Stock"] : 0,
                             EstStockable = reader["EstStockable"] != DBNull.Value && (bool)reader["EstStockable"],
-                            AfficherStockPOS = reader["AfficherStockPOS"] != DBNull.Value && (bool)reader["AfficherStockPOS"],
+                            AfficherStockPOS = reader["AfficherStockPOS"] != DBNull.Value ? reader["AfficherStockPOS"].ToString() : null,
                             ImageURL = reader["ImageArticle"]?.ToString(),
                             NomCategorie = reader["NomCategorie"]?.ToString(),
                             IdCategorie = reader["IdCategorie"] != DBNull.Value ? (Guid)reader["IdCategorie"] : Guid.Empty,
@@ -1784,7 +1784,7 @@ namespace Api_BuildTech.Controllers.Articles
                         SeuilAlerte = reader["SeuilAlerte"] != DBNull.Value ? (decimal)reader["SeuilAlerte"] : 0,
                         EstStockable = reader["EstStockable"] != DBNull.Value && (bool)reader["EstStockable"],
                         EstPos = reader["EstPos"] != DBNull.Value && (bool)reader["EstPos"],
-                        AfficherStockPOS = reader["AfficherStockPOS"] != DBNull.Value && (bool)reader["AfficherStockPOS"],
+                        AfficherStockPOS = reader["AfficherStockPOS"] != DBNull.Value ? reader["AfficherStockPOS"].ToString() : null,
                         ImageURL = reader["ImageArticle"]?.ToString(),
                         NomCategorie = reader["NomCategorie"]?.ToString(),
                         IdCategorie = reader["IdCategorie"] != DBNull.Value ? (Guid)reader["IdCategorie"] : Guid.Empty,
@@ -1895,7 +1895,7 @@ namespace Api_BuildTech.Controllers.Articles
                             EstPromo = reader["EstPromo"] != DBNull.Value && (bool)reader["EstPromo"],
                             Stock = reader["Stock"] != DBNull.Value ? (decimal)reader["Stock"] : 0,
                             EstStockable = reader["EstStockable"] != DBNull.Value && (bool)reader["EstStockable"],
-                            AfficherStockPOS = reader["AfficherStockPOS"] != DBNull.Value && (bool)reader["AfficherStockPOS"],
+                            AfficherStockPOS = reader["AfficherStockPOS"] != DBNull.Value ? reader["AfficherStockPOS"].ToString() : null,
                             ImageURL = reader["ImageArticle"]?.ToString(),
                             Position = reader["Position"] != DBNull.Value ? (int)reader["Position"] : 0,
                             TauxTva = reader["TauxTva"] != DBNull.Value ? (decimal)reader["TauxTva"] : 0,
@@ -2013,7 +2013,7 @@ namespace Api_BuildTech.Controllers.Articles
                 EstPromo = ReadNullableBool(reader, "EstPromo"),
                 EstComposer = ReadNullableBool(reader, "EstComposer"),
                 EstVendableSansComposition = ReadNullableBool(reader, "EstVendableSansComposition"),
-                AfficherStockPOS = ReadNullableBool(reader, "AfficherStockPOS"),
+                AfficherStockPOS = ReadNullableString(reader, "AfficherStockPOS"),
                 TauxTva = ReadNullableDecimal(reader, "TauxTva"),
                 Stock = ReadNullableDecimal(reader, "Stock"),
                 SeuilAlerte = ReadNullableDecimal(reader, "SeuilAlerte"),

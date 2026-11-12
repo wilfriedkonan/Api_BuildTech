@@ -952,7 +952,69 @@
         }
       }
     },
-    "/api/Auth/me": {
+    "/api/Auth/refresh": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshBodyRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshBodyRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshBodyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Auth/logout": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshBodyRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshBodyRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshBodyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Auth/csrf": {
       "get": {
         "tags": [
           "Auth"
@@ -964,8 +1026,39 @@
         }
       }
     },
-    "/api/Auth/logout": {
+    "/api/Auth/switch-entreprise": {
       "post": {
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SwitchEntrepriseRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SwitchEntrepriseRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SwitchEntrepriseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Auth/me": {
+      "get": {
         "tags": [
           "Auth"
         ],
@@ -3874,6 +3967,31 @@
               "type": "string",
               "format": "date-time"
             }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 20
+            }
+          },
+          {
+            "name": "typeMouvement",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -5616,6 +5734,68 @@
         }
       }
     },
+    "/api/Sync/apply-batch": {
+      "post": {
+        "tags": [
+          "Sync"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplyBatchRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplyBatchRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplyBatchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Sync/ack-batch": {
+      "post": {
+        "tags": [
+          "Sync"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AckBatchRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AckBatchRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AckBatchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/Sync/pending": {
       "get": {
         "tags": [
@@ -6508,6 +6688,23 @@
   },
   "components": {
     "schemas": {
+      "AckBatchRequest": {
+        "type": "object",
+        "properties": {
+          "apiKey": {
+            "type": "string",
+            "nullable": true
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MarkSyncedRequest"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "AddPosDetailRequest": {
         "type": "object",
         "properties": {
@@ -6569,6 +6766,23 @@
           },
           "serveurAffecte": {
             "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ApplyBatchRequest": {
+        "type": "object",
+        "properties": {
+          "apiKey": {
+            "type": "string",
+            "nullable": true
+          },
+          "changes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SyncRequest"
+            },
             "nullable": true
           }
         },
@@ -7738,6 +7952,9 @@
           "success": {
             "type": "boolean"
           },
+          "retry": {
+            "type": "boolean"
+          },
           "errorMessage": {
             "type": "string",
             "nullable": true
@@ -7826,6 +8043,16 @@
         },
         "additionalProperties": false
       },
+      "RefreshBodyRequest": {
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "RegistrationRequest": {
         "type": "object",
         "properties": {
@@ -7847,6 +8074,11 @@
           },
           "prenom": {
             "type": "string",
+            "nullable": true
+          },
+          "idEntreprise": {
+            "type": "string",
+            "format": "uuid",
             "nullable": true
           },
           "entrepriseName": {
@@ -7921,6 +8153,16 @@
         },
         "additionalProperties": false
       },
+      "SwitchEntrepriseRequest": {
+        "type": "object",
+        "properties": {
+          "idEntreprise": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false
+      },
       "SyncRequest": {
         "type": "object",
         "properties": {
@@ -7931,6 +8173,26 @@
           "idEntreprise": {
             "type": "string",
             "format": "uuid"
+          },
+          "changeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "createdDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "previousVersion": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
           },
           "tableName": {
             "type": "string",

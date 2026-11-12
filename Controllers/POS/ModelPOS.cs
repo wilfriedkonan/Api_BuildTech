@@ -390,27 +390,6 @@ public class TypePaiementDto
 }
 
 // ========================================
-// MOUVEMENTS STOCK
-// ========================================
-
-public class MouvementStockDto
-{
-    public Guid Id { get; set; }
-    public Guid IdArticle { get; set; }
-    public string? Reference { get; set; }
-    public DateTime DateTransaction { get; set; }
-    public string? TypeMouvement { get; set; }
-    public decimal Quantite { get; set; }
-    public decimal QuantiteAvant { get; set; }
-    public decimal QuantiteApres { get; set; }
-    public decimal PrixUnitaire { get; set; }
-    public decimal PrixTotal { get; set; }
-    public string? Utilisateur { get; set; }
-    public Guid IdEntreprise { get; set; }
-    public string? Motif { get; set; }
-}
-
-// ========================================
 // RÉPONSES
 // ========================================
 
@@ -483,6 +462,9 @@ public class PosPaymentResponse
     /// "Paid" = Facture payée (CAS 2)
     /// </summary>
     public string? PaymentMode { get; set; }
+
+    /// <summary>NOT_FOUND, CANCELLED, ALREADY_PAID ou null (succes / erreur technique).</summary>
+    public string? ErrorCode { get; set; }
 
     /// <summary>
     /// La facture après traitement

@@ -1,11 +1,12 @@
 {
   "version": 2,
-  "dgSpecHash": "ajIrgFRfrPo=",
+  "dgSpecHash": "tsaALPhrpTM=",
   "success": true,
   "projectFilePath": "C:\\Users\\kan_w\\source\\repos\\Api_BuildTech\\Api_BuildTech\\Api_BuildTech.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\kan_w\\.nuget\\packages\\azure.core\\1.50.0\\azure.core.1.50.0.nupkg.sha512",
     "C:\\Users\\kan_w\\.nuget\\packages\\azure.identity\\1.17.1\\azure.identity.1.17.1.nupkg.sha512",
+    "C:\\Users\\kan_w\\.nuget\\packages\\bcrypt.net-next\\4.2.0\\bcrypt.net-next.4.2.0.nupkg.sha512",
     "C:\\Users\\kan_w\\.nuget\\packages\\bouncycastle.cryptography\\2.6.1\\bouncycastle.cryptography.2.6.1.nupkg.sha512",
     "C:\\Users\\kan_w\\.nuget\\packages\\mailkit\\4.14.1\\mailkit.4.14.1.nupkg.sha512",
     "C:\\Users\\kan_w\\.nuget\\packages\\microsoft.aspnetcore.authentication.jwtbearer\\8.0.0\\microsoft.aspnetcore.authentication.jwtbearer.8.0.0.nupkg.sha512",

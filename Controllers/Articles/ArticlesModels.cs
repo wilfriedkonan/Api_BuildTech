@@ -35,7 +35,7 @@ namespace Api_BuildTech.Controllers.Articles
         public bool? EstEnPorter { get; set; }
         public decimal? Stock { get; set; }
         public decimal? SeuilAlerte { get; set; }
-        public bool? AfficherStockPOS { get; set; }
+        public string? AfficherStockPOS { get; set; }   // nvarchar(50) en base (ex. "Visible")
 
         // ✅ Stock calculé automatiquement
         public decimal StockActuel { get; set; }
@@ -243,7 +243,7 @@ namespace Api_BuildTech.Controllers.Articles
         public decimal? SeuilAlerte { get; set; }  // Non exposé au public
         public bool EstStockable { get; set; }
         public bool EstPos { get; set; }
-        public bool AfficherStockPOS { get; set; }
+        public string? AfficherStockPOS { get; set; }   // nvarchar(50) en base (ex. "Visible")
 
         // Présentation
         public string? ImageURL { get; set; }

@@ -51,6 +51,7 @@ using Api_BuildTech.Controllers.Users;
 using Api_BuildTech.Services;
 using Api_BuildTech.Services.messagerie;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
@@ -68,7 +69,24 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddHttpContextAccessor();
-
+builder.Services.Configure<AuthCookieSettings>(
+    builder.Configuration.GetSection(AuthCookieSettings.SectionName));
+var authCookies = builder.Configuration
+    .GetSection(AuthCookieSettings.SectionName)
+    .Get<AuthCookieSettings>() ?? new AuthCookieSettings();
+builder.Services.Configure<ForwardedHeadersOptions>(o =>
+{
+    o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+});
+if (authCookies.AllowedOrigins.Length == 0)
+{
+    throw new InvalidOperationException(
+        "AuthCookies:AllowedOrigins est vide : au moins l'origine du front (ex. https://app.buildtch.uk) est requise.");
+}
+builder.Services.Configure<ForwardedHeadersOptions>(o =>
+{
+    o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+});
 // ============================================================================
 // 2. SWAGGER CONFIGURATION
 // ============================================================================
@@ -114,7 +132,18 @@ builder.Services.AddSwaggerGen(c =>
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
+    // Front web authentifié (cookies)
+    options.AddPolicy("Spa", policy =>
+    {
+        policy.WithOrigins(authCookies.AllowedOrigins)
+              .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
+              .WithHeaders("Content-Type", "Authorization", "X-CSRF-Token", "X-Auth-Mode")
+              .AllowCredentials();
+    });
+
+    // Endpoints publics SANS cookies (catalogue, boutique publique, commande e-commerce...)
+    // À appliquer avec [EnableCors("PublicApi")] sur ces contrôleurs.
+    options.AddPolicy("PublicApi", policy =>
     {
         policy.AllowAnyOrigin()
               .AllowAnyMethod()
@@ -147,6 +176,20 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = jwtSettings["Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
         ClockSkew = TimeSpan.Zero
+    };
+
+    // NOUVEAU : lire le JWT depuis le cookie HttpOnly si aucun en-tête Authorization n'est fourni
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            if (!context.Request.Headers.ContainsKey("Authorization")
+                && context.Request.Cookies.TryGetValue(authCookies.AccessCookieName, out var cookieToken))
+            {
+                context.Token = cookieToken;
+            }
+            return Task.CompletedTask;
+        }
     };
 });
 
@@ -190,6 +233,9 @@ builder.Services.AddScoped<AuthService>(sp =>
         sp.GetRequiredService<IHttpContextAccessor>(),
         sp.GetRequiredService<IConfiguration>()
     ));
+
+builder.Services.AddSingleton<TokenService>();
+builder.Services.AddSingleton<AuthCookieService>();
 
 builder.Services.AddScoped<SyncService>(sp =>
     new SyncService(
@@ -540,6 +586,8 @@ builder.Services.AddScoped<RapportsPdfService>();
 
 var app = builder.Build();
 
+app.UseForwardedHeaders();
+
 // ============================================================================
 // 20. CONFIGURATION MIDDLEWARE
 // ============================================================================
@@ -559,7 +607,8 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 // CORS
-app.UseCors("AllowAll");
+app.UseCors("Spa");
+app.UseMiddleware<CsrfProtectionMiddleware>();
 
 // Authentication & Authorization
 app.UseAuthentication();

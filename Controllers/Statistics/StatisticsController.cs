@@ -30,6 +30,8 @@ namespace Api_BuildTech.Controllers.Statistics
         {
             try
             {
+                if (!PeriodeValide(period))
+                    return BadRequest(new { success = false, message = "Période invalide (7days, 30days, 90days, 1year)" });
 
                 _logger.LogInformation($"📊 Chargement dashboard pour entreprise , période: {period}");
 
@@ -60,7 +62,7 @@ namespace Api_BuildTech.Controllers.Statistics
 
                 _logger.LogInformation($"📊 Chargement activité entreprise ");
 
-                var dashboard = await _statisticsService.GetDashboardDataAsync();
+                var dashboard = await _statisticsService.GetDashboardDataAsync(inclureGraphique: false);
 
                 return Ok(new
                 {
@@ -87,7 +89,7 @@ namespace Api_BuildTech.Controllers.Statistics
 
                 _logger.LogInformation($"📊 Chargement ventes entreprise ");
 
-                var dashboard = await _statisticsService.GetDashboardDataAsync();
+                var dashboard = await _statisticsService.GetDashboardDataAsync(inclureGraphique: false);
 
                 return Ok(new
                 {
@@ -114,7 +116,7 @@ namespace Api_BuildTech.Controllers.Statistics
 
                 _logger.LogInformation($"💰 Chargement revenus entreprise ");
 
-                var dashboard = await _statisticsService.GetDashboardDataAsync();
+                var dashboard = await _statisticsService.GetDashboardDataAsync(inclureGraphique: false);
 
                 return Ok(new
                 {
@@ -141,7 +143,7 @@ namespace Api_BuildTech.Controllers.Statistics
 
                 _logger.LogInformation($"👥 Chargement clients entreprise ");
 
-                var dashboard = await _statisticsService.GetDashboardDataAsync();
+                var dashboard = await _statisticsService.GetDashboardDataAsync(inclureGraphique: false);
 
                 return Ok(new
                 {
@@ -168,7 +170,7 @@ namespace Api_BuildTech.Controllers.Statistics
 
                 _logger.LogInformation($"📦 Chargement inventaire entreprise ");
 
-                var dashboard = await _statisticsService.GetDashboardDataAsync();
+                var dashboard = await _statisticsService.GetDashboardDataAsync(inclureGraphique: false);
 
                 return Ok(new
                 {
@@ -193,10 +195,12 @@ namespace Api_BuildTech.Controllers.Statistics
         {
             try
             {
+                if (!PeriodeValide(period))
+                    return BadRequest(new { success = false, message = "Période invalide (7days, 30days, 90days, 1year)" });
 
                 _logger.LogInformation($"📈 Chargement graphique entreprise , période: {period}");
 
-                var dashboard = await _statisticsService.GetDashboardDataAsync(period);
+                var dashboard = await _statisticsService.GetDashboardDataAsync(period, inclureActivite: false);
 
                 return Ok(new
                 {
@@ -211,17 +215,9 @@ namespace Api_BuildTech.Controllers.Statistics
             }
         }
 
-        /// <summary>
-        /// Récupérer l'IdEntreprise depuis le token JWT
-        /// </summary>
-        private int GetIdEntreprise()
-        {
-            var idEntrepriseStr = User.FindFirst("IdEntreprise")?.Value;
-            if (int.TryParse(idEntrepriseStr, out var idEntreprise))
-            {
-                return idEntreprise;
-            }
-            throw new UnauthorizedAccessException("IdEntreprise non trouvé dans le token");
-        }
+        private static readonly string[] Periodes = { "7days", "30days", "90days", "1year" };
+
+        private static bool PeriodeValide(string period)
+            => !string.IsNullOrWhiteSpace(period) && Periodes.Contains(period);
     }
 }

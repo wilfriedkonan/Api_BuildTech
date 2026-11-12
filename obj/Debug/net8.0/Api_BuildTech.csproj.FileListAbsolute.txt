@@ -93,3 +93,4 @@ C:\Users\kan_w\source\repos\Api_BuildTech\Api_BuildTech\bin\Debug\net8.0\System.
 C:\Users\kan_w\source\repos\Api_BuildTech\Api_BuildTech\bin\Debug\net8.0\de\PdfSharp.Charting.resources.dll
 C:\Users\kan_w\source\repos\Api_BuildTech\Api_BuildTech\bin\Debug\net8.0\de\PdfSharp.resources.dll
 C:\Users\kan_w\source\repos\Api_BuildTech\Api_BuildTech\bin\Debug\net8.0\runtimes\win\lib\net8.0\Microsoft.Win32.SystemEvents.dll
+C:\Users\kan_w\source\repos\Api_BuildTech\Api_BuildTech\bin\Debug\net8.0\BCrypt-Net-Next.dll

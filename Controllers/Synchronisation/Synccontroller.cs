@@ -1,9 +1,17 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Api_BuildTech.Controllers.Synchronisation
 {
+    /// <summary>
+    /// Synchronisation caisse &lt;-&gt; hub. Memes routes qu'avant (apply, pending, mark-synced, statistics, health),
+    /// mais la cle est maintenant propre a CHAQUE entreprise et l'entreprise est deduite de la cle.
+    /// La cle se passe de preference dans l'en-tete X-Sync-Key ; l'ancien champ ApiKey (corps / query) reste
+    /// accepte le temps de migrer la caisse (une cle dans l'URL finit dans les journaux).
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
+    [AllowAnonymous]
     public class SyncController : ControllerBase
     {
         private readonly SyncService _syncService;
@@ -15,285 +23,201 @@ namespace Api_BuildTech.Controllers.Synchronisation
             _logger = logger;
         }
 
-        /// <summary>
-        /// Applique un changement sur la base distante
-        /// </summary>
-        /// <param name="request">Détails du changement à appliquer</param>
-        /// <returns>Résultat de l'opération</returns>
+        private string? LireCle(string? repli) =>
+            Request.Headers["X-Sync-Key"].FirstOrDefault() ?? repli;
+
+        private static IActionResult NonAutorise() =>
+            new UnauthorizedObjectResult(new { success = false, message = "Cle de synchronisation invalide, revoquee ou entreprise inactive." });
+
+        /// <summary>Applique un changement venant de la caisse sur la base distante.</summary>
         [HttpPost("apply")]
         public async Task<IActionResult> ApplyChange([FromBody] SyncRequest request)
         {
             try
             {
-                _logger.LogInformation($"Réception changement: {request.TableName} ({request.Operation})");
-                // Validation de la clé API
-                if (!_syncService.ValidateApiKey(request.ApiKey))
+                if (request == null) return BadRequest(new { success = false, message = "Requete vide." });
+
+                var idEntreprise = await _syncService.ResoudreEntrepriseAsync(LireCle(request.ApiKey));
+                if (idEntreprise == null)
                 {
-                    _logger.LogWarning("Tentative d'accès avec clé API invalide");
-                    return Unauthorized(new
-                    {
-                        success = false,
-                        message = "Clé API invalide"
-                    });
+                    _logger.LogWarning("Sync apply : cle refusee");
+                    return NonAutorise();
                 }
 
-                // Validation de l'entreprise
-                if (!await _syncService.ValidateEntrepriseAsync(request.IdEntreprise))
-                {
-                    return NotFound(new
-                    {
-                        success = false,
-                        message = "Entreprise introuvable"
-                    });
-                }
+                // Garde-fou de configuration : la caisse annonce une autre entreprise que celle de sa cle
+                if (request.IdEntreprise != Guid.Empty && request.IdEntreprise != idEntreprise.Value)
+                    return StatusCode(403, new { success = false, message = "Cette cle n'appartient pas a l'entreprise indiquee." });
 
-                // Validation des données
-                if (string.IsNullOrEmpty(request.TableName) ||
-                    string.IsNullOrEmpty(request.Operation) ||
-                    string.IsNullOrEmpty(request.DataJSON))
-                {
-                    return BadRequest(new
-                    {
-                        success = false,
-                        message = "TableName, Operation et DataJSON sont obligatoires"
-                    });
-                }
+                if (string.IsNullOrWhiteSpace(request.TableName) || string.IsNullOrWhiteSpace(request.Operation)
+                    || (request.Operation.ToUpperInvariant() != "DELETE" && string.IsNullOrEmpty(request.DataJSON)))
+                    return BadRequest(new { success = false, message = "TableName et Operation sont obligatoires, DataJSON aussi sauf pour DELETE." });
 
-                // Appliquer le changement
-                var result = await _syncService.ApplyChangeAsync(request);
+                var result = await _syncService.ApplyChangeAsync(idEntreprise.Value, request);
 
-                if (result.Success)
-                {
-                    return Ok(result);
-                }
-                else
-                {
-                    return StatusCode(500, result);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erreur lors de l'application du changement");
-                return StatusCode(500, new
-                {
-                    success = false,
-                    message = "Erreur serveur",
-                    error = ex.Message
-                });
-            }
-        }
-
-        /// <summary>
-        /// Récupère les changements en attente pour une entreprise
-        /// </summary>
-        /// <param name="idEntreprise">ID de l'entreprise</param>
-        /// <param name="apiKey">Clé API</param>
-        /// <param name="since">Date depuis laquelle récupérer les changements</param>
-        /// <param name="maxResults">Nombre maximum de résultats</param>
-        /// <param name="direction">Direction de synchronisation</param>
-        [HttpGet("pending")]
-        public async Task<IActionResult> GetPendingChanges(
-            [FromQuery] Guid idEntreprise,
-            [FromQuery] string apiKey,
-            [FromQuery] DateTime? since = null,
-            [FromQuery] int maxResults = 100,
-            [FromQuery] string direction = "REMOTE_TO_LOCAL")
-        {
-            try
-            {
-                //    // Validation de la clé API
-                if (!_syncService.ValidateApiKey(apiKey))
-                {
-                    return Unauthorized(new
-                    {
-                        success = false,
-                        message = "Clé API invalide"
-                    });
-                }
-
-                // Validation de l'entreprise
-                if (!await _syncService.ValidateEntrepriseAsync(idEntreprise))
-                {
-                    return NotFound(new
-                    {
-                        success = false,
-                        message = "Entreprise introuvable"
-                    });
-                }
-
-                // Limiter le nombre de résultats
-                if (maxResults > 500)
-                {
-                    maxResults = 500;
-                }
-
-                var request = new GetPendingChangesRequest
-                {
-                    ApiKey = apiKey,
-                    IdEntreprise = idEntreprise,
-                    Since = since ?? DateTime.UtcNow.AddDays(-30), // Par défaut, 30 derniers jours
-                    MaxResults = maxResults,
-                    Direction = direction
-                };
-
-                var result = await _syncService.GetPendingChangesAsync(request);
-
+                // RETRY = a reessayer plus tard (503) ; APPLIED / DUPLICATE / CONFLICT / REJECTED = reponse definitive (200)
+                if (result.Status == "RETRY") return StatusCode(503, result);
                 return Ok(result);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erreur lors de la récupération des changements");
-                return StatusCode(500, new
-                {
-                    success = false,
-                    message = "Erreur serveur",
-                    error = ex.Message
-                });
+                _logger.LogError(ex, "Erreur lors de l'application du changement");
+                return StatusCode(500, new { success = false, message = "Erreur serveur" });
             }
         }
 
-        /// <summary>
-        /// Marque un changement comme synchronisé ou enregistre l'erreur
-        /// </summary>
+        /// <summary>Applique un LOT de changements (max 100) : un resultat par changement, dans l'ordre d'envoi.</summary>
+        [HttpPost("apply-batch")]
+        public async Task<IActionResult> ApplyBatch([FromBody] ApplyBatchRequest request)
+        {
+            try
+            {
+                if (request?.Changes == null || request.Changes.Count == 0)
+                    return BadRequest(new { success = false, message = "Aucun changement." });
+                if (request.Changes.Count > 100)
+                    return BadRequest(new { success = false, message = "Maximum 100 changements par envoi." });
+
+                var id = await _syncService.ResoudreEntrepriseAsync(LireCle(request.ApiKey));
+                if (id == null) { _logger.LogWarning("Sync apply-batch : cle refusee"); return NonAutorise(); }
+
+                if (request.Changes.Any(c => c.IdEntreprise != Guid.Empty && c.IdEntreprise != id.Value))
+                    return StatusCode(403, new { success = false, message = "Cette cle n'appartient pas a l'entreprise indiquee." });
+
+                var results = await _syncService.ApplyBatchAsync(id.Value, request.Changes);
+                return Ok(new { success = true, count = results.Count, results });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erreur apply-batch");
+                return StatusCode(500, new { success = false, message = "Erreur serveur" });
+            }
+        }
+
+        /// <summary>Acquitte un LOT de changements hub -> caisse (max 200).</summary>
+        [HttpPost("ack-batch")]
+        public async Task<IActionResult> AckBatch([FromBody] AckBatchRequest request)
+        {
+            try
+            {
+                if (request?.Items == null || request.Items.Count == 0)
+                    return BadRequest(new { success = false, message = "Rien a acquitter." });
+                if (request.Items.Count > 200)
+                    return BadRequest(new { success = false, message = "Maximum 200 acquittements." });
+
+                var id = await _syncService.ResoudreEntrepriseAsync(LireCle(request.ApiKey));
+                if (id == null) return NonAutorise();
+
+                var n = await _syncService.MarkBatchAsync(id.Value, request.Items);
+                if (n < 0) return StatusCode(500, new { success = false, message = "Erreur lors de la mise a jour" });
+                return Ok(new { success = true, updated = n });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erreur ack-batch");
+                return StatusCode(500, new { success = false, message = "Erreur serveur" });
+            }
+        }
+
+        /// <summary>Changements du hub a appliquer sur la caisse (l'entreprise vient de la cle).</summary>
+        [HttpGet("pending")]
+        public async Task<IActionResult> GetPendingChanges(
+            [FromQuery] Guid idEntreprise,
+            [FromQuery] string? apiKey = null,
+            [FromQuery] DateTime? since = null,            // ignore : conserve pour compatibilite
+            [FromQuery] int maxResults = 100,
+            [FromQuery] string direction = "REMOTE_TO_LOCAL") // ignore : seul REMOTE_TO_LOCAL est servi
+        {
+            try
+            {
+                var id = await _syncService.ResoudreEntrepriseAsync(LireCle(apiKey));
+                if (id == null) return NonAutorise();
+                if (idEntreprise != Guid.Empty && idEntreprise != id.Value)
+                    return StatusCode(403, new { success = false, message = "Cette cle n'appartient pas a l'entreprise indiquee." });
+
+                maxResults = Math.Clamp(maxResults, 1, 200);
+
+                var result = await _syncService.GetPendingChangesAsync(new GetPendingChangesRequest
+                {
+                    IdEntreprise = id.Value,
+                    MaxResults = maxResults,
+                    Direction = "REMOTE_TO_LOCAL",
+                    Since = DateTime.MinValue
+                });
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erreur lors de la recuperation des changements");
+                return StatusCode(500, new { success = false, message = "Erreur serveur" });
+            }
+        }
+
+        /// <summary>Acquitte (ou refuse) un changement hub -> caisse.</summary>
         [HttpPost("mark-synced")]
         public async Task<IActionResult> MarkAsSynced([FromBody] MarkSyncedRequest request)
         {
             try
             {
-                // Validation de la clé API
-                if (!_syncService.ValidateApiKey(request.ApiKey))
-                {
-                    return Unauthorized(new
-                    {
-                        success = false,
-                        message = "Clé API invalide"
-                    });
-                }
+                if (request == null) return BadRequest(new { success = false, message = "Requete vide." });
 
-                var success = await _syncService.MarkAsSyncedAsync(request);
+                var id = await _syncService.ResoudreEntrepriseAsync(LireCle(request.ApiKey));
+                if (id == null) return NonAutorise();
 
-                if (success)
+                var success = await _syncService.MarkAsSyncedAsync(id.Value, request);
+                if (!success) return StatusCode(500, new { success = false, message = "Erreur lors de la mise a jour" });
+
+                return Ok(new
                 {
-                    return Ok(new
-                    {
-                        success = true,
-                        message = request.Success
-                            ? "Changement marqué comme synchronisé"
-                            : "Échec enregistré, retry programmé"
-                    });
-                }
-                else
-                {
-                    return StatusCode(500, new
-                    {
-                        success = false,
-                        message = "Erreur lors de la mise à jour"
-                    });
-                }
+                    success = true,
+                    message = request.Success ? "Changement marque comme synchronise" : "Echec enregistre, nouvelle tentative programmee"
+                });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erreur lors du marquage");
-                return StatusCode(500, new
-                {
-                    success = false,
-                    message = "Erreur serveur",
-                    error = ex.Message
-                });
+                return StatusCode(500, new { success = false, message = "Erreur serveur" });
             }
         }
 
-        /// <summary>
-        /// Récupère les statistiques de synchronisation pour une entreprise
-        /// </summary>
+        /// <summary>Statistiques de l'entreprise de la cle.</summary>
         [HttpGet("statistics/{idEntreprise}")]
-        public async Task<IActionResult> GetStatistics(
-            Guid idEntreprise,
-            [FromQuery] string apiKey)
+        public async Task<IActionResult> GetStatistics(Guid idEntreprise, [FromQuery] string? apiKey = null)
         {
             try
             {
-                // Validation de la clé API
-                if (!_syncService.ValidateApiKey(apiKey))
-                {
-                    return Unauthorized(new
-                    {
-                        success = false,
-                        message = "Clé API invalide"
-                    });
-                }
+                var id = await _syncService.ResoudreEntrepriseAsync(LireCle(apiKey));
+                if (id == null) return NonAutorise();
+                if (idEntreprise != id.Value)
+                    return StatusCode(403, new { success = false, message = "Cette cle n'appartient pas a l'entreprise indiquee." });
 
-                var stats = await _syncService.GetStatisticsAsync(idEntreprise);
-
-                return Ok(new
-                {
-                    success = true,
-                    data = stats
-                });
+                var stats = await _syncService.GetStatisticsAsync(id.Value);
+                return Ok(new { success = true, data = stats, serverTimeUtc = DateTime.UtcNow });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erreur lors de la récupération des statistiques");
-                return StatusCode(500, new
-                {
-                    success = false,
-                    message = "Erreur serveur",
-                    error = ex.Message
-                });
+                _logger.LogError(ex, "Erreur lors de la recuperation des statistiques");
+                return StatusCode(500, new { success = false, message = "Erreur serveur" });
             }
         }
 
-        /// <summary>
-        /// Health check de l'API
-        /// </summary>
+        /// <summary>Health check (sans donnees sensibles).</summary>
         [HttpGet("health")]
-        public IActionResult Health()
-        {
-            return Ok(new
-            {
-                status = "healthy",
-                timestamp = DateTime.UtcNow,
-                version = "1.0.0"
-            });
-        }
+        public IActionResult Health() =>
+            Ok(new { status = "healthy", timestamp = DateTime.UtcNow, version = "3.0.0" });
 
-        /// <summary>
-        /// Test de connectivité avec la base de données
-        /// </summary>
+        /// <summary>Test de la cle ET de la connexion a la base (retourne l'heure du serveur).</summary>
         [HttpGet("db-test")]
-        public async Task<IActionResult> DatabaseTest([FromQuery] string apiKey)
+        public async Task<IActionResult> DatabaseTest([FromQuery] string? apiKey = null)
         {
             try
             {
-                // Validation de la clé API
-                if (!_syncService.ValidateApiKey(apiKey))
-                {
-                    return Unauthorized(new
-                    {
-                        success = false,
-                        message = "Clé API invalide"
-                    });
-                }
-
-                // Tester une entreprise au hasard
-                var testGuid = Guid.NewGuid();
-                var exists = await _syncService.ValidateEntrepriseAsync(testGuid);
-
-                return Ok(new
-                {
-                    success = true,
-                    message = "Connexion base de données OK",
-                    timestamp = DateTime.UtcNow
-                });
+                var id = await _syncService.ResoudreEntrepriseAsync(LireCle(apiKey));
+                if (id == null) return NonAutorise();
+                return Ok(new { success = true, message = "Cle valide, connexion base de donnees OK", timestamp = DateTime.UtcNow });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new
-                {
-                    success = false,
-                    message = "Erreur de connexion base de données",
-                    error = ex.Message
-                });
+                _logger.LogError(ex, "db-test");
+                return StatusCode(500, new { success = false, message = "Erreur de connexion base de donnees" });
             }
         }
     }

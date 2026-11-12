@@ -1,4 +1,4 @@
-﻿namespace Api_BuildTech.Controllers.Registration
+namespace Api_BuildTech.Controllers.Registration
 {
     public class RegistrationRequest
     {
@@ -8,6 +8,14 @@
         public string? Password { get; set; } = string.Empty;
         public string Nom { get; set; }
         public string? Prenom { get; set; }
+
+        // Entreprise DEJA EXISTANTE sur la plateforme (creee en amont, ex. synchronisee depuis une caisse locale).
+        // Renseigne : on cree le compte web (COMPTES_WEB) rattache a l'organisation de cette entreprise.
+        //  - entreprise deja sur la plateforme : EntrepriseName, IdPlan, SubscriptionDurationMonths sont ignores ;
+        //  - entreprise ABSENTE : elle est creee avec cet Id (EntrepriseName requis), avec une organisation generee
+        //    automatiquement (ou IdOrganisation/OrganisationName), et sa souscription si IdPlan + duree sont fournis.
+        // Reserve aux super-admins (session JWT, claim is_super_admin).
+        public Guid? IdEntreprise { get; set; }
 
         // Informations Entreprise
         public string EntrepriseName { get; set; } = string.Empty;
@@ -37,6 +45,14 @@
     {
         public bool Success { get; set; }
         public string? Message { get; set; }
+
+        // Code de refus lisible par le front (mode "entreprise existante") :
+        // ENTREPRISE_SUPPRIMEE | ORGANISATION_INTROUVABLE | PLAN_INVALIDE | PROPRIETAIRE_EXISTANT | EMAIL_UTILISE | DONNEES_INVALIDES | ERREUR
+        public string? ErrorCode { get; set; }
+
+        // Mode "entreprise existante" : ce qui a été créé automatiquement
+        public bool EntrepriseCreee { get; set; }
+        public bool OrganisationCreee { get; set; }
 
         // IDs créés
         public Guid? OrganisationId { get; set; }

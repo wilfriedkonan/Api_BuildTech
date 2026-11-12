@@ -59,7 +59,7 @@ namespace Api_BuildTech.Controllers.ArticleStock
         public bool? EstPromo { get; set; }
         public bool? EstComposer { get; set; }
         public bool? EstVendableSansComposition { get; set; }
-        public bool? AfficherStockPOS { get; set; }
+        public string? AfficherStockPOS { get; set; }
         public string? position { get; set; }
         public DateTime? DatePerenption { get; set; }
 

@@ -46,8 +46,8 @@ public class CustomersStatsDto
 public class InventoryStatsDto
 {
     public int TotalProducts { get; set; }  // Nombre total de produits
-    public int LowStock { get; set; }  // Articles en stock faible (< 10)
-    public int OutOfStock { get; set; }  // Articles en rupture (= 0)
+    public int LowStock { get; set; }  // Articles en stock faible (0 < stock <= StockMini, comme l'ecran Stock)
+    public int OutOfStock { get; set; }  // Articles en rupture (stock <= 0)
 }
 
 /// <summary>

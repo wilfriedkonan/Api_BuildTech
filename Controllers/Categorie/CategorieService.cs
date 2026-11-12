@@ -25,7 +25,7 @@ namespace Api_BuildTech.Controllers.Categorie
                 using var cmd = new SqlCommand($@"
                     SELECT c.Id,  c.Code, c.Designation, c.Couleur, c.IdEntreprise, c.IdDomaine,
                            c.Etat, c.Ordre, c.EstRestaurant, c.EstEmporte, c.Statut
-                    FROM CATHEGORIE c
+                    FROM CATEGORIE c
                     WHERE ISNULL(c.Etat, 'Actif') != 'Supprimer' {whereClause}
                     ORDER BY c.Ordre, c.Designation", conn);
 
@@ -77,7 +77,7 @@ namespace Api_BuildTech.Controllers.Categorie
                 using var cmd = new SqlCommand($@"
                     SELECT c.Id,  c.Code, c.Designation, c.Couleur, c.IdEntreprise, c.IdDomaine,
                            c.Etat, c.Ordre, c.EstRestaurant, c.EstEmporte, c.Statut
-                    FROM CATHEGORIE c
+                    FROM CATEGORIE c
                     WHERE c.EstRestaurant = 1 
                       AND ISNULL(c.Etat, 'Actif') = 'Actif' 
                       {whereClause}
@@ -131,7 +131,7 @@ namespace Api_BuildTech.Controllers.Categorie
                 using var cmd = new SqlCommand($@"
                     SELECT c.Id,  c.Code, c.Designation, c.Couleur, c.IdEntreprise, c.IdDomaine,
                            c.Etat, c.Ordre, c.EstRestaurant, c.EstEmporte,  c.Statut
-                    FROM CATHEGORIE c
+                    FROM CATEGORIE c
                     WHERE c.EstEmporte = 1 
                       AND ISNULL(c.Etat, 'Actif') = 'Actif' 
                       {whereClause}
@@ -183,7 +183,7 @@ namespace Api_BuildTech.Controllers.Categorie
                 using var cmd = new SqlCommand($@"
                     SELECT c.Id,  c.Code, c.Designation, c.Couleur, c.IdEntreprise, c.IdDomaine,
                            c.Etat, c.Ordre, c.EstRestaurant, c.EstEmporte,  c.Statut
-                    FROM CATHEGORIE c
+                    FROM CATEGORIE c
                     WHERE c.Id = @Id {whereClause}", conn);
 
                 cmd.Parameters.AddWithValue("@Id", id);
@@ -228,7 +228,7 @@ namespace Api_BuildTech.Controllers.Categorie
                 await conn.OpenAsync();
 
                 using var cmd = new SqlCommand(@"
-                    INSERT INTO CATHEGORIE (
+                    INSERT INTO CATEGORIE (
                         Id, Code, Designation, Couleur, IdEntreprise, IdDomaine, Etat,
                         Ordre, EstRestaurant, EstEmporte,Statut
                     )
@@ -271,7 +271,7 @@ namespace Api_BuildTech.Controllers.Categorie
                 var whereClause = BuildWhereClause();
 
                 string sql = $@"
-                    UPDATE CATHEGORIE
+                    UPDATE CATEGORIE
                     SET Code = COALESCE(@Code, Code),
                         Designation = COALESCE(@Designation, Designation),
                         Couleur = COALESCE(@Couleur, Couleur),
@@ -318,7 +318,7 @@ namespace Api_BuildTech.Controllers.Categorie
                 var whereClause = BuildWhereClause();
 
                 using var cmd = new SqlCommand($@"
-                    UPDATE CATHEGORIE
+                    UPDATE CATEGORIE
                     SET Etat = 'Supprimer'
                     WHERE Id = @Id {whereClause}", conn);
 

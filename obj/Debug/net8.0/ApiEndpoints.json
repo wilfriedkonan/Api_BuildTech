@@ -363,6 +363,16 @@
   },
   {
     "ContainingType": "Api_BuildTech.Controllers.Authentication.AuthController",
+    "Method": "Csrf",
+    "RelativePath": "api/Auth/csrf",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Authentication.AuthController",
     "Method": "Health",
     "RelativePath": "api/Auth/health",
     "HttpMethod": "GET",
@@ -394,7 +404,13 @@
     "HttpMethod": "POST",
     "IsController": true,
     "Order": 0,
-    "Parameters": [],
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Authentication.RefreshBodyRequest",
+        "IsRequired": false
+      }
+    ],
     "ReturnTypes": []
   },
   {
@@ -405,6 +421,38 @@
     "IsController": true,
     "Order": 0,
     "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Authentication.AuthController",
+    "Method": "Refresh",
+    "RelativePath": "api/Auth/refresh",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Authentication.RefreshBodyRequest",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Authentication.AuthController",
+    "Method": "SwitchEntreprise",
+    "RelativePath": "api/Auth/switch-entreprise",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Authentication.SwitchEntrepriseRequest",
+        "IsRequired": true
+      }
+    ],
     "ReturnTypes": []
   },
   {
@@ -2136,6 +2184,21 @@
         "Name": "dateFin",
         "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
         "IsRequired": false
+      },
+      {
+        "Name": "page",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "pageSize",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "typeMouvement",
+        "Type": "System.String",
+        "IsRequired": false
       }
     ],
     "ReturnTypes": []
@@ -3570,6 +3633,22 @@
   },
   {
     "ContainingType": "Api_BuildTech.Controllers.Synchronisation.SyncController",
+    "Method": "AckBatch",
+    "RelativePath": "api/Sync/ack-batch",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Synchronisation.AckBatchRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Synchronisation.SyncController",
     "Method": "ApplyChange",
     "RelativePath": "api/Sync/apply",
     "HttpMethod": "POST",
@@ -3579,6 +3658,22 @@
       {
         "Name": "request",
         "Type": "Api_BuildTech.Controllers.Synchronisation.SyncRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Api_BuildTech.Controllers.Synchronisation.SyncController",
+    "Method": "ApplyBatch",
+    "RelativePath": "api/Sync/apply-batch",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Api_BuildTech.Controllers.Synchronisation.ApplyBatchRequest",
         "IsRequired": true
       }
     ],

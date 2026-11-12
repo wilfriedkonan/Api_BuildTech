@@ -1,7 +1,7 @@
-﻿using Api_BuildTech.Controllers.Synchronisation;
 using Microsoft.Data.SqlClient;
 using System.Data;
-using System.Text.Json;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Api_BuildTech.Controllers.Synchronisation
 {
@@ -9,25 +9,6 @@ namespace Api_BuildTech.Controllers.Synchronisation
     {
         private readonly string _connectionString;
         private readonly ILogger<SyncService> _logger;
-        private const string VALID_API_KEY = "VotreCléAPISecrète123!";
-
-        // ✅ NOUVEAU: Définir les colonnes à exclure par table
-        private static readonly Dictionary<string, HashSet<string>> ExcludedColumns = new()
-        {
-            // Colonnes auto-générées à exclure lors des INSERT
-            { "DOMAINE_RESTAURANT", new HashSet<string>() /*{ "Id" }*/ }, // Id est IDENTITY
-            { "ARTICLES", new HashSet<string>() }, // Pas de colonnes à exclure (Id est GUID)
-            { "FACTURE", new HashSet<string>() {"identifiant"} },
-            { "CLIENTS", new HashSet<string>() },
-            { "DETAIL_TRANSACTIONS", new HashSet<string>() },
-            { "STOCK", new HashSet<string>() },
-            { "UTILISATEURS", new HashSet<string>() },
-            { "ENTREPRISE", new HashSet<string>() },
-            { "CATEGORIES", new HashSet<string>() },
-            { "TABLES", new HashSet<string>() },
-            { "FOURNISSEURS", new HashSet<string>() },
-
-        };
 
         public SyncService(string connectionString, ILogger<SyncService> logger)
         {
@@ -35,351 +16,155 @@ namespace Api_BuildTech.Controllers.Synchronisation
             _logger = logger;
         }
 
-        #region Validation
+        #region Authentification par cle d'entreprise
 
-        public bool ValidateApiKey(string apiKey)
+        /// <summary>
+        /// Retrouve l'entreprise a partir de sa cle secrete (hash SHA-256 dans SYNC_CLES).
+        /// Retourne null si la cle est inconnue, revoquee, ou si l'entreprise est supprimee / desactivee
+        /// (ENTREPRISE.Etat = 'Supprimer' ou CongDistantActif = 0).
+        /// </summary>
+        public async Task<Guid?> ResoudreEntrepriseAsync(string? cle)
         {
-            return apiKey == VALID_API_KEY;
-        }
+            if (string.IsNullOrWhiteSpace(cle) || cle.Length > 128) return null;
 
-        public async Task<bool> ValidateEntrepriseAsync(Guid idEntreprise)
-        {
+            var hash = SHA256.HashData(Encoding.ASCII.GetBytes(cle.Trim()));
             using var conn = new SqlConnection(_connectionString);
-            using var cmd = new SqlCommand("SELECT COUNT(*) FROM ENTREPRISE WHERE Id = @Id AND Etat IS NULL", conn);
-            cmd.Parameters.AddWithValue("@Id", idEntreprise);
-
             await conn.OpenAsync();
-            var count = (int)await cmd.ExecuteScalarAsync();
-            return count > 0;
+
+            Guid? idCle = null, idEntreprise = null;
+            using (var cmd = new SqlCommand(@"
+                SELECT TOP (1) k.Id, k.IdEntreprise
+                FROM dbo.SYNC_CLES k
+                JOIN dbo.ENTREPRISE e ON e.Id = k.IdEntreprise
+                WHERE k.CleHash = @h AND k.EstActif = 1
+                  AND ISNULL(e.Etat, N'') <> N'Supprimer'
+                  AND ISNULL(e.CongDistantActif, 1) = 1", conn))
+            {
+                cmd.Parameters.Add("@h", SqlDbType.VarBinary, 32).Value = hash;
+                using var r = await cmd.ExecuteReaderAsync();
+                if (await r.ReadAsync())
+                {
+                    idCle = r.GetGuid(0);
+                    idEntreprise = r.GetGuid(1);
+                }
+            }
+
+            if (idCle != null)
+            {
+                using var upd = new SqlCommand(@"
+                    UPDATE dbo.SYNC_CLES SET LastUsedDate = SYSUTCDATETIME()
+                    WHERE Id = @id AND (LastUsedDate IS NULL OR LastUsedDate < DATEADD(MINUTE, -1, SYSUTCDATETIME()))", conn);
+                upd.Parameters.AddWithValue("@id", idCle.Value);
+                await upd.ExecuteNonQueryAsync();
+            }
+            return idEntreprise;
         }
 
         #endregion
 
-        #region Appliquer Changement
+        #region Appliquer un changement (caisse -> hub)
 
-        public async Task<SyncResponse> ApplyChangeAsync(SyncRequest request)
+        /// <summary>
+        /// Applique UN changement via dbo.usp_SyncAppliquer : liste blanche de tables, colonnes lues dans la base,
+        /// IdEntreprise force a celui de la cle, upsert, idempotence (ChangeId), conflits, SyncOrigin.
+        /// </summary>
+        public async Task<SyncResponse> ApplyChangeAsync(Guid idEntreprise, SyncRequest request)
         {
             try
             {
-                _logger.LogInformation($"Application changement: {request.TableName} ({request.Operation}) pour entreprise {request.IdEntreprise}");
-
-                if (!await ValidateEntrepriseAsync(request.IdEntreprise))
-                {
-                    return new SyncResponse
-                    {
-                        Success = false,
-                        Message = "Entreprise introuvable ou supprimée"
-                    };
-                }
-
-                switch (request.Operation.ToUpper())
-                {
-                    case "INSERT":
-                        await ApplyInsertAsync(request);
-                        break;
-
-                    case "UPDATE":
-                        var updateResult = await ApplyUpdateAsync(request);
-                        if (updateResult.HasConflict)
-                            return updateResult;
-                        break;
-
-                    case "DELETE":
-                        await ApplyDeleteAsync(request);
-                        break;
-
-                    default:
-                        return new SyncResponse
-                        {
-                            Success = false,
-                            Message = $"Opération invalide: {request.Operation}"
-                        };
-                }
-
-                _logger.LogInformation($"Changement appliqué avec succès: {request.TableName} ID {request.RecordId}");
-
-                return new SyncResponse
-                {
-                    Success = true,
-                    Message = "Changement appliqué avec succès"
-                };
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+                return await ApplyOneAsync(conn, idEntreprise, request);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Erreur lors de l'application du changement: {request.TableName}");
-                return new SyncResponse
+                _logger.LogError(ex, "Sync apply : erreur technique sur {Table} {Record}", request.TableName, request.RecordId);
+                return new SyncResponse { Success = false, Status = "RETRY", Message = "Erreur serveur.", ChangeId = request.ChangeId };
+            }
+        }
+
+        /// <summary>Applique un lot (une seule connexion, un resultat par changement, ordre conserve).</summary>
+        public async Task<List<ApplyBatchItemResult>> ApplyBatchAsync(Guid idEntreprise, IReadOnlyList<SyncRequest> changes)
+        {
+            var results = new List<ApplyBatchItemResult>(changes.Count);
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+                foreach (var ch in changes)
                 {
-                    Success = false,
-                    Message = $"Erreur: {ex.Message}"
-                };
-            }
-        }
-
-        /// <summary>
-        /// ✅ CORRECTION: Applique un INSERT en excluant les colonnes IDENTITY
-        /// </summary>
-        private async Task ApplyInsertAsync(SyncRequest request)
-        {
-            using var conn = new SqlConnection(_connectionString);
-            await conn.OpenAsync();
-
-            // Parser le JSON
-            var data = ParseJsonToDictionary(request.DataJSON);
-
-            // ✅ NOUVEAU: Exclure les colonnes IDENTITY pour cette table
-            var excludedCols = GetExcludedColumns(request.TableName);
-            var filteredData = data;
-            //.Where(kvp => !excludedCols.Contains(kvp.Key, StringComparer.OrdinalIgnoreCase))
-            //.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-
-            if (filteredData.Count == 0)
-            {
-                _logger.LogWarning($"Aucune colonne à insérer après exclusion pour {request.TableName}");
-                return;
-            }
-
-            // Construire la requête INSERT
-            var columns = string.Join(", ", filteredData.Keys);
-            var parameters = string.Join(", ", filteredData.Keys.Select(k => $"@{k}"));
-
-            var sql = $"INSERT INTO {request.TableName} ({columns}) VALUES ({parameters})";
-
-            _logger.LogDebug($"SQL INSERT: {sql}");
-
-            using var cmd = new SqlCommand(sql, conn);
-
-            // Ajouter les paramètres
-            foreach (var kvp in filteredData)
-            {
-                AddSqlParameter(cmd, kvp.Key, kvp.Value);
-            }
-
-            await cmd.ExecuteNonQueryAsync();
-        }
-
-        /// <summary>
-        /// ✅ CORRECTION: Applique un UPDATE (pas besoin d'exclure les colonnes IDENTITY)
-        /// </summary>
-        private async Task<SyncResponse> ApplyUpdateAsync(SyncRequest request)
-        {
-            using var conn = new SqlConnection(_connectionString);
-            await conn.OpenAsync();
-
-            // Vérifier si l'enregistrement existe
-            var existsCmd = new SqlCommand(
-                $"SELECT COUNT(*) FROM {request.TableName} WHERE Id = @Id", conn);
-            existsCmd.Parameters.AddWithValue("@Id", request.RecordId);
-
-            var exists = (int)await existsCmd.ExecuteScalarAsync() > 0;
-
-            if (!exists)
-            {
-                _logger.LogWarning($"Enregistrement {request.RecordId} n'existe pas dans {request.TableName}, conversion en INSERT");
-                await ApplyInsertAsync(request);
-                return new SyncResponse { Success = true, Message = "INSERT appliqué (enregistrement inexistant)" };
-            }
-
-            // Parser le JSON
-            var data = ParseJsonToDictionary(request.DataJSON);
-
-            // ✅ Pour UPDATE, on peut inclure Id car on ne l'insère pas, on l'utilise juste dans WHERE
-            // Mais on exclut quand même les colonnes IDENTITY si elles sont dans le SET
-            var excludedCols = GetExcludedColumns(request.TableName);
-            var filteredData = data;
-            //.Where(kvp => !excludedCols.Contains(kvp.Key, StringComparer.OrdinalIgnoreCase))
-            //.Where(kvp => !kvp.Key.Equals("Id", StringComparison.OrdinalIgnoreCase)) // Exclure Id du SET
-            //.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-
-            if (filteredData.Count == 0)
-            {
-                _logger.LogWarning($"Aucune colonne à mettre à jour pour {request.TableName}");
-                return new SyncResponse { Success = true, Message = "Aucune colonne à mettre à jour" };
-            }
-
-            // Construire la requête UPDATE
-            var setClauses = string.Join(", ", filteredData.Keys.Select(k => $"{k} = @{k}"));
-            var sql = $"UPDATE {request.TableName} SET {setClauses} WHERE Id = @RecordId";
-
-            _logger.LogDebug($"SQL UPDATE: {sql}");
-
-            using var cmd = new SqlCommand(sql, conn);
-            cmd.Parameters.AddWithValue("@RecordId", request.RecordId);
-
-            // Ajouter les paramètres
-            foreach (var kvp in filteredData)
-            {
-                AddSqlParameter(cmd, kvp.Key, kvp.Value);
-            }
-
-            await cmd.ExecuteNonQueryAsync();
-
-            return new SyncResponse { Success = true, Message = "UPDATE appliqué" };
-        }
-
-        private async Task ApplyDeleteAsync(SyncRequest request)
-        {
-            using var conn = new SqlConnection(_connectionString);
-            using var cmd = new SqlCommand(
-                $"DELETE FROM {request.TableName} WHERE Id = @Id", conn);
-
-            cmd.Parameters.AddWithValue("@Id", request.RecordId);
-
-            await conn.OpenAsync();
-            await cmd.ExecuteNonQueryAsync();
-        }
-
-        #endregion
-
-        #region Utilitaires Colonnes
-
-        /// <summary>
-        /// ✅ NOUVEAU: Récupère les colonnes à exclure pour une table
-        /// </summary>
-        private HashSet<string> GetExcludedColumns(string tableName)
-        {
-            if (ExcludedColumns.TryGetValue(tableName, out var columns))
-            {
-                return columns;
-            }
-
-            // Par défaut, pas de colonnes à exclure
-            return new HashSet<string>();
-        }
-
-        /// <summary>
-        /// ✅ ALTERNATIVE: Détecte automatiquement les colonnes IDENTITY (optionnel)
-        /// </summary>
-        private async Task<HashSet<string>> GetIdentityColumnsAsync(string tableName)
-        {
-            var identityColumns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            using var conn = new SqlConnection(_connectionString);
-            using var cmd = new SqlCommand(@"
-                SELECT COLUMN_NAME
-                FROM INFORMATION_SCHEMA.COLUMNS
-                WHERE TABLE_NAME = @TableName
-                  AND COLUMNPROPERTY(OBJECT_ID(TABLE_SCHEMA + '.' + TABLE_NAME), COLUMN_NAME, 'IsIdentity') = 1",
-                conn);
-
-            cmd.Parameters.AddWithValue("@TableName", tableName);
-
-            await conn.OpenAsync();
-            using var reader = await cmd.ExecuteReaderAsync();
-
-            while (await reader.ReadAsync())
-            {
-                identityColumns.Add(reader.GetString(0));
-            }
-
-            return identityColumns;
-        }
-
-        #endregion
-
-        #region Utilitaires JSON
-
-        private Dictionary<string, object> ParseJsonToDictionary(string json)
-        {
-            var result = new Dictionary<string, object>();
-
-            using (JsonDocument doc = JsonDocument.Parse(json))
-            {
-                foreach (var property in doc.RootElement.EnumerateObject())
-                {
-                    result[property.Name] = GetJsonValue(property.Value);
+                    var r = await ApplyOneAsync(conn, idEntreprise, ch);
+                    results.Add(new ApplyBatchItemResult { ChangeId = ch.ChangeId ?? Guid.Empty, Status = r.Status ?? "RETRY", Message = r.Message });
                 }
             }
-
-            return result;
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Sync apply-batch : erreur technique");
+                // Les changements non traites sont simplement absents de la reponse : la caisse les considere a reessayer
+            }
+            return results;
         }
 
-        private object GetJsonValue(JsonElement element)
+        private async Task<SyncResponse> ApplyOneAsync(SqlConnection conn, Guid idEntreprise, SyncRequest request)
         {
-            switch (element.ValueKind)
+            var resp = new SyncResponse { ChangeId = request.ChangeId };
+            try
             {
-                case JsonValueKind.String:
-                    var strValue = element.GetString();
-                    if (Guid.TryParse(strValue, out Guid guidValue))
-                        return guidValue;
-                    if (DateTime.TryParse(strValue, out DateTime dateValue))
-                        return dateValue;
-                    return strValue;
+                if (request.ChangeId == null || request.ChangeId == Guid.Empty)
+                    _logger.LogWarning("Sync apply sans ChangeId (client ancien) : pas d'idempotence pour {Table} {Record}", request.TableName, request.RecordId);
 
-                case JsonValueKind.Number:
-                    if (element.TryGetInt32(out int intValue))
-                        return intValue;
-                    if (element.TryGetInt64(out long longValue))
-                        return longValue;
-                    if (element.TryGetDecimal(out decimal decimalValue))
-                        return decimalValue;
-                    return element.GetDouble();
+                if (string.IsNullOrWhiteSpace(request.TableName) || request.TableName.Length > 128
+                    || (request.DataJSON != null && request.DataJSON.Length > 2_000_000))
+                {
+                    resp.Status = "REJECTED";
+                    resp.Message = "Changement mal forme ou trop volumineux.";
+                    return resp;
+                }
 
-                case JsonValueKind.True:
-                    return true;
+                using var cmd = new SqlCommand("dbo.usp_SyncAppliquer", conn)
+                {
+                    CommandType = CommandType.StoredProcedure,
+                    CommandTimeout = 30
+                };
+                cmd.Parameters.AddWithValue("@IdEntreprise", idEntreprise);
+                cmd.Parameters.AddWithValue("@ChangeId", request.ChangeId is { } id && id != Guid.Empty ? id : Guid.NewGuid());
+                cmd.Parameters.Add("@TableName", SqlDbType.NVarChar, 128).Value = request.TableName ?? "";
+                cmd.Parameters.AddWithValue("@RecordId", request.RecordId);
+                cmd.Parameters.Add("@Operation", SqlDbType.VarChar, 10).Value = (request.Operation ?? "").ToUpperInvariant();
+                cmd.Parameters.Add("@DataJSON", SqlDbType.NVarChar, -1).Value = (object?)request.DataJSON ?? DBNull.Value;
+                cmd.Parameters.Add("@CreatedDate", SqlDbType.DateTime2).Value = (object?)request.CreatedDate ?? DBNull.Value;
+                var pStatut = cmd.Parameters.Add("@Statut", SqlDbType.VarChar, 10);
+                pStatut.Direction = ParameterDirection.Output;
+                var pMessage = cmd.Parameters.Add("@Message", SqlDbType.NVarChar, 400);
+                pMessage.Direction = ParameterDirection.Output;
 
-                case JsonValueKind.False:
-                    return false;
+                await cmd.ExecuteNonQueryAsync();
 
-                case JsonValueKind.Null:
-                    return DBNull.Value;
-
-                default:
-                    return element.GetRawText();
+                resp.Status = pStatut.Value as string ?? "RETRY";
+                resp.Message = pMessage.Value as string ?? resp.Status;
+                resp.Success = resp.Status is "APPLIED" or "DUPLICATE";
+                resp.HasConflict = resp.Status == "CONFLICT";
             }
-        }
-
-        private void AddSqlParameter(SqlCommand cmd, string name, object value)
-        {
-            if (value == null || value == DBNull.Value)
+            catch (SqlException ex)
             {
-                cmd.Parameters.AddWithValue($"@{name}", DBNull.Value);
-                return;
+                // Erreur technique (connexion, timeout...) : a reessayer, la caisse n'est pas en tort
+                _logger.LogError(ex, "Sync apply : erreur SQL sur {Table} {Record}", request.TableName, request.RecordId);
+                resp.Success = false;
+                resp.Status = "RETRY";
+                resp.Message = "Erreur serveur.";
             }
-
-            switch (value)
-            {
-                case Guid guidVal:
-                    cmd.Parameters.Add($"@{name}", SqlDbType.UniqueIdentifier).Value = guidVal;
-                    break;
-
-                case DateTime dateVal:
-                    cmd.Parameters.Add($"@{name}", SqlDbType.DateTime2).Value = dateVal;
-                    break;
-
-                case int intVal:
-                    cmd.Parameters.Add($"@{name}", SqlDbType.Int).Value = intVal;
-                    break;
-
-                case long longVal:
-                    cmd.Parameters.Add($"@{name}", SqlDbType.BigInt).Value = longVal;
-                    break;
-
-                case decimal decimalVal:
-                    cmd.Parameters.Add($"@{name}", SqlDbType.Decimal).Value = decimalVal;
-                    break;
-
-                case double doubleVal:
-                    cmd.Parameters.Add($"@{name}", SqlDbType.Float).Value = doubleVal;
-                    break;
-
-                case bool boolVal:
-                    cmd.Parameters.Add($"@{name}", SqlDbType.Bit).Value = boolVal;
-                    break;
-
-                case string strVal:
-                    cmd.Parameters.Add($"@{name}", SqlDbType.NVarChar).Value = strVal;
-                    break;
-
-                default:
-                    cmd.Parameters.AddWithValue($"@{name}", value);
-                    break;
-            }
+            return resp;
         }
 
         #endregion
 
-        #region Récupérer Changements, Marquer Synced, Statistiques (INCHANGÉ)
+        #region Changements hub -> caisse, acquittement, statistiques
 
+        /// <summary>
+        /// Changements du hub a appliquer sur la caisse : toujours REMOTE_TO_LOCAL, uniquement les tables de
+        /// sens DOWN/BOTH (SYNC_TABLES), dans l'ordre parents -> enfants. Plus de fenetre "Since" : tout ce qui
+        /// n'est pas acquitte est renvoye, meme apres une longue panne de la caisse.
+        /// </summary>
         public async Task<PendingChangesResponse> GetPendingChangesAsync(GetPendingChangesRequest request)
         {
             try
@@ -389,100 +174,88 @@ namespace Api_BuildTech.Controllers.Synchronisation
                 using var conn = new SqlConnection(_connectionString);
                 using var cmd = new SqlCommand(@"
                     SELECT TOP (@MaxResults)
-                        Id, IdEntreprise, TableName, RecordId, Operation,
-                        Direction, Version, PreviousVersion, DataJSON, ChangedFields,
-                        IsSynced, SyncAttempts, MaxRetries, Priority,
-                        CreatedDate, SyncedDate, NextRetryDate,
-                        LastError, LastErrorDate,
-                        CreatedByUserId, CreatedByUserName, SourceMachine,
-                        ConflictResolution, IsConflict, ConflictWith
-                    FROM CDC_CHANGES
-                    WHERE IdEntreprise = @IdEntreprise
-                      AND Direction = @Direction
-                      AND IsSynced = 0
-                      AND (SyncAttempts < MaxRetries)
-                      AND (NextRetryDate IS NULL OR NextRetryDate <= GETUTCDATE())
-                      AND CreatedDate > @Since
-                    ORDER BY Priority ASC, CreatedDate ASC", conn);
+                        c.Id, c.IdEntreprise,
+                        -- COMPAT_CATEGORIE : les caisses gardent la table locale 'CATHEGORIE'
+                        CASE WHEN c.TableName = N'CATEGORIE' THEN N'CATHEGORIE' ELSE c.TableName END AS TableName,
+                        c.RecordId, c.Operation,
+                        c.Direction, c.Version, c.PreviousVersion, c.DataJSON, c.ChangedFields,
+                        c.IsSynced, c.SyncAttempts, c.MaxRetries, c.Priority,
+                        c.CreatedDate, c.SyncedDate, c.NextRetryDate,
+                        c.LastError, c.LastErrorDate,
+                        c.CreatedByUserId, c.CreatedByUserName, c.SourceMachine,
+                        c.ConflictResolution, c.IsConflict, c.ConflictWith
+                    FROM dbo.CDC_CHANGES c
+                    JOIN dbo.SYNC_TABLES s ON s.TableName = c.TableName AND s.Sens IN ('DOWN', 'BOTH')
+                    WHERE c.IdEntreprise = @IdEntreprise
+                      AND c.Direction = 'REMOTE_TO_LOCAL'
+                      AND c.IsSynced = 0
+                      AND c.SyncAttempts < c.MaxRetries
+                      AND (c.NextRetryDate IS NULL OR c.NextRetryDate <= SYSUTCDATETIME())
+                    ORDER BY s.Ordre, c.CreatedDate", conn);
 
                 cmd.Parameters.AddWithValue("@MaxResults", request.MaxResults);
                 cmd.Parameters.AddWithValue("@IdEntreprise", request.IdEntreprise);
-                cmd.Parameters.AddWithValue("@Direction", request.Direction);
-                cmd.Parameters.AddWithValue("@Since", request.Since);
 
                 await conn.OpenAsync();
                 using var reader = await cmd.ExecuteReaderAsync();
-
                 while (await reader.ReadAsync())
                 {
                     changes.Add(MapToCDCChange(reader));
                 }
 
-                _logger.LogInformation($"Récupéré {changes.Count} changements pour entreprise {request.IdEntreprise}");
-
-                return new PendingChangesResponse
-                {
-                    Success = true,
-                    Count = changes.Count,
-                    Changes = changes
-                };
+                _logger.LogInformation("Sync pending : {Count} changements pour l'entreprise {Id}", changes.Count, request.IdEntreprise);
+                return new PendingChangesResponse { Success = true, Count = changes.Count, Changes = changes };
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Erreur lors de la récupération des changements pour {request.IdEntreprise}");
-                return new PendingChangesResponse
-                {
-                    Success = false,
-                    Count = 0
-                };
+                _logger.LogError(ex, "Erreur lors de la recuperation des changements pour {Id}", request.IdEntreprise);
+                return new PendingChangesResponse { Success = false, Count = 0 };
             }
         }
 
-        public async Task<bool> MarkAsSyncedAsync(MarkSyncedRequest request)
+        /// <summary>
+        /// Acquitte un changement hub -> caisse. Limite a l'entreprise de la cle (une cle ne peut pas
+        /// acquitter les changements d'une autre entreprise). Retry = true : pas de tentative comptee.
+        /// </summary>
+        public async Task<bool> MarkAsSyncedAsync(Guid idEntreprise, MarkSyncedRequest request)
         {
+            return await MarkBatchAsync(idEntreprise, new[] { request }) == 1;
+        }
+
+        /// <summary>Acquitte plusieurs changements (une connexion). Retourne le nombre de changements du hub mis a jour.</summary>
+        public async Task<int> MarkBatchAsync(Guid idEntreprise, IReadOnlyList<MarkSyncedRequest> items)
+        {
+            int n = 0;
             try
             {
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
-
-                if (request.Success)
+                foreach (var request in items)
                 {
                     using var cmd = new SqlCommand(@"
-                        UPDATE CDC_CHANGES
-                        SET IsSynced = 1,
-                            SyncedDate = GETUTCDATE(),
-                            LastError = NULL
-                        WHERE Id = @Id", conn);
-
+                        UPDATE dbo.CDC_CHANGES SET
+                            IsSynced      = CASE WHEN @ok = 1 THEN 1 ELSE IsSynced END,
+                            SyncedDate    = CASE WHEN @ok = 1 THEN SYSUTCDATETIME() ELSE SyncedDate END,
+                            LastError     = CASE WHEN @ok = 1 THEN NULL ELSE LEFT(@err, 4000) END,
+                            LastErrorDate = CASE WHEN @ok = 1 THEN LastErrorDate ELSE SYSUTCDATETIME() END,
+                            SyncAttempts  = CASE WHEN @ok = 0 AND @retry = 0 THEN SyncAttempts + 1 ELSE SyncAttempts END,
+                            NextRetryDate = CASE WHEN @ok = 1 THEN NULL
+                                                 ELSE DATEADD(MINUTE, CASE WHEN SyncAttempts >= 10 THEN 60 ELSE POWER(2, SyncAttempts) END, SYSUTCDATETIME()) END
+                        WHERE Id = @Id AND IdEntreprise = @e AND Direction = 'REMOTE_TO_LOCAL'", conn);
+                    cmd.Parameters.AddWithValue("@ok", request.Success ? 1 : 0);
+                    cmd.Parameters.AddWithValue("@retry", request.Retry ? 1 : 0);
+                    cmd.Parameters.Add("@err", SqlDbType.NVarChar, 4000).Value = (object?)request.ErrorMessage ?? DBNull.Value;
                     cmd.Parameters.AddWithValue("@Id", request.ChangeId);
-                    await cmd.ExecuteNonQueryAsync();
-
-                    _logger.LogInformation($"Changement {request.ChangeId} marqué comme synchronisé");
+                    cmd.Parameters.AddWithValue("@e", idEntreprise);
+                    n += await cmd.ExecuteNonQueryAsync();
                 }
-                else
-                {
-                    using var cmd = new SqlCommand(@"
-                        UPDATE CDC_CHANGES
-                        SET SyncAttempts = SyncAttempts + 1,
-                            LastError = @ErrorMessage,
-                            LastErrorDate = GETUTCDATE(),
-                            NextRetryDate = DATEADD(MINUTE, POWER(2, SyncAttempts + 1), GETUTCDATE())
-                        WHERE Id = @Id", conn);
-
-                    cmd.Parameters.AddWithValue("@Id", request.ChangeId);
-                    cmd.Parameters.AddWithValue("@ErrorMessage", request.ErrorMessage ?? (object)DBNull.Value);
-                    await cmd.ExecuteNonQueryAsync();
-
-                    _logger.LogWarning($"Échec sync changement {request.ChangeId}: {request.ErrorMessage}");
-                }
-
-                return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Erreur lors du marquage du changement {request.ChangeId}");
-                return false;
+                _logger.LogError(ex, "Erreur lors du marquage de {Count} changements", items.Count);
+                return -1;
             }
+            return n;
         }
 
         public async Task<SyncStatistics> GetStatisticsAsync(Guid idEntreprise)

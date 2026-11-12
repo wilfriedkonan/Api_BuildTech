@@ -61,7 +61,7 @@ namespace Api_BuildTech.Controllers.POS
                 AddParameter(cmd, "@Serveur", request.Serveur);
                 AddParameter(cmd, "@idUtilisateur", request.idUtilisateur ?? currentUserId);
                 AddParameter(cmd, "@IdClient", request.IdClient);
-                cmd.Parameters.AddWithValue("@IdEntreprise", request.IdEntreprise);
+                cmd.Parameters.AddWithValue("@IdEntreprise", GetEntrepriseIdFromContext());   // jamais depuis le corps de la requete
                 AddParameter(cmd, "@IdSession", request.IdSession);
                 cmd.Parameters.AddWithValue("@DateModification", currentDate);
 
@@ -131,10 +131,11 @@ namespace Api_BuildTech.Controllers.POS
                         EstAvarie, AutorisationModif, idDomaine, idTypeService,
                         DateCreation, DateModification, IdUserModification
                     FROM DETAIL_TRANSACTIONS
-                    WHERE IdFacture = @IdFacture AND estSupprimer = 0
+                    WHERE IdFacture = @IdFacture AND estSupprimer = 0 " + BuildWhereClause() + @"
                     ORDER BY DateCreation", conn);
 
                 cmd.Parameters.AddWithValue("@IdFacture", idFacture);
+                AddEntrepriseParameter(cmd);
 
                 using var reader = await cmd.ExecuteReaderAsync();
 
@@ -151,6 +152,58 @@ namespace Api_BuildTech.Controllers.POS
             return details;
         }
 
+        /// <summary>La facture existe-t-elle pour l'entreprise courante ?</summary>
+        public async Task<bool> FactureExisteAsync(Guid idFacture)
+        {
+            return await GetFactureByIdAsync(idFacture) != null;
+        }
+
+        /// <summary>Details (non supprimes) de plusieurs factures de l'entreprise, en une seule requete.</summary>
+        private async Task<List<DetailTransactionDto>> GetDetailsFacturesAsync(IEnumerable<Guid> idsFactures)
+        {
+            var details = new List<DetailTransactionDto>();
+            var ids = idsFactures.Distinct().ToList();
+            if (ids.Count == 0) return details;
+
+            try
+            {
+                using var conn = await GetConnectionAsync();
+                using var cmd = new SqlCommand { Connection = conn };
+
+                var noms = new List<string>();
+                for (var i = 0; i < ids.Count; i++)
+                {
+                    noms.Add($"@F{i}");
+                    cmd.Parameters.AddWithValue($"@F{i}", ids[i]);
+                }
+
+                cmd.CommandText = $@"
+                    SELECT
+                        Id, Designation, Quantite, PrixUnitaireHT, PrixUnitaireTTC,
+                        PrixVente, PrixTotal, sousTotal, TauxTVA, MontantTVA, valeurRemise,
+                        PrixAchatUnitaire, Specificite, DetailComposent, DetailComposant,
+                        Specification, domaineAricle, IdArticle, IdFacture, IdServeur,
+                        IdCuisinier, IdUser, DesignationAgent, IdEntreprise, Etat,
+                        EstExecuter, estSuite, estDetaileComd, estSupprimer, EstModifier,
+                        EstAvarie, AutorisationModif, idDomaine, idTypeService,
+                        DateCreation, DateModification, IdUserModification
+                    FROM DETAIL_TRANSACTIONS
+                    WHERE IdFacture IN ({string.Join(",", noms)}) AND estSupprimer = 0 {BuildWhereClause()}
+                    ORDER BY IdFacture, DateCreation";
+                AddEntrepriseParameter(cmd);
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                    details.Add(MapDetailFromReader(reader));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erreur recuperation details de plusieurs factures");
+            }
+
+            return details;
+        }
+
         /// <summary>
         /// Ajouter un détail à une facture POS
         /// </summary>
@@ -160,15 +213,23 @@ namespace Api_BuildTech.Controllers.POS
         {
             try
             {
+                if (!await FactureExisteAsync(idFacture))
+                {
+                    _logger.LogWarning($"Ajout detail refuse : facture {idFacture} introuvable pour cette entreprise");
+                    return null;
+                }
+
                 var detailId = Guid.NewGuid();
                 var currentUserId = GetUserIdFromContext();
                 var currentDate = DateTime.Now;
 
                 // Calculer les montants
-                decimal prixTotal = request.Quantite * request.PrixUnitaireHT;
-                decimal montantTVA = prixTotal * (request.TauxTVA / 100);
-                decimal prixTTC = prixTotal + montantTVA;
-                decimal sousTotal = prixTotal - request.valeurRemise;
+                // Logique caisse : prix saisis TTC, HT/TVA extraits, PrixTotal = net TTC apres remise
+                var lc = CalculerLigne(request.Quantite, request.PrixUnitaireHT, request.PrixVente, request.TauxTVA, request.valeurRemise);
+                decimal prixTotal = lc.PrixTotal;
+                decimal montantTVA = lc.MontantTVA;
+                decimal prixTTC = lc.PrixUnitaireTTC;
+                decimal sousTotal = lc.SousTotal;
 
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
@@ -198,14 +259,14 @@ namespace Api_BuildTech.Controllers.POS
                 cmd.Parameters.AddWithValue("@IdArticle", request.IdArticle);
                 cmd.Parameters.AddWithValue("@Designation", request.Designation ?? "");
                 cmd.Parameters.AddWithValue("@Quantite", request.Quantite);
-                cmd.Parameters.AddWithValue("@PrixUnitaireHT", request.PrixUnitaireHT);
+                cmd.Parameters.AddWithValue("@PrixUnitaireHT", lc.PrixUnitaireHT);
                 cmd.Parameters.AddWithValue("@PrixUnitaireTTC", prixTTC);
-                cmd.Parameters.AddWithValue("@PrixVente", request.PrixVente);
+                cmd.Parameters.AddWithValue("@PrixVente", lc.PrixUnitaireTTC);
                 cmd.Parameters.AddWithValue("@PrixTotal", prixTotal);
                 cmd.Parameters.AddWithValue("@sousTotal", sousTotal);
                 cmd.Parameters.AddWithValue("@TauxTVA", request.TauxTVA);
                 cmd.Parameters.AddWithValue("@MontantTVA", montantTVA);
-                cmd.Parameters.AddWithValue("@valeurRemise", request.valeurRemise);
+                cmd.Parameters.AddWithValue("@valeurRemise", lc.ValeurRemise);
                 AddParameter(cmd, "@Specificite", request.Specificite);
                 AddParameter(cmd, "@DetailComposent", request.DetailComposent);
                 AddParameter(cmd, "@IdServeur", request.IdServeur);
@@ -264,7 +325,7 @@ namespace Api_BuildTech.Controllers.POS
                 {
                     var currentUserId = GetUserIdFromContext();
                     var currentDate = DateTime.Now;
-                    var enterpriseId = request.IdEntreprise ?? GetEntrepriseIdFromContext();
+                    var enterpriseId = GetEntrepriseIdFromContext();   // jamais depuis le corps de la requete
                     var factureId = Guid.NewGuid();
 
                     // ========================================
@@ -335,10 +396,12 @@ namespace Api_BuildTech.Controllers.POS
                     {
                         var detailId = Guid.NewGuid();
 
-                        decimal prixTotal = article.Quantite * article.PrixUnitaireHT;
-                        decimal montantTVA = prixTotal * (article.TauxTVA / 100);
-                        decimal prixTTC = prixTotal + montantTVA;
-                        decimal sousTotal = prixTotal - article.valeurRemise;
+                        // Logique caisse : prix saisis TTC, HT/TVA extraits, PrixTotal = net TTC apres remise
+                        var lc = CalculerLigne(article.Quantite, article.PrixUnitaireHT, article.PrixVente, article.TauxTVA, article.valeurRemise);
+                        decimal prixTotal = lc.PrixTotal;
+                        decimal montantTVA = lc.MontantTVA;
+                        decimal prixTTC = lc.PrixUnitaireTTC;
+                        decimal sousTotal = lc.SousTotal;
 
                         using (var cmd = new SqlCommand(@"
                             INSERT INTO DETAIL_TRANSACTIONS (
@@ -365,14 +428,14 @@ namespace Api_BuildTech.Controllers.POS
                             cmd.Parameters.AddWithValue("@IdArticle", article.IdArticle);
                             cmd.Parameters.AddWithValue("@Designation", article.Designation ?? "");
                             cmd.Parameters.AddWithValue("@Quantite", article.Quantite);
-                            cmd.Parameters.AddWithValue("@PrixUnitaireHT", article.PrixUnitaireHT);
+                            cmd.Parameters.AddWithValue("@PrixUnitaireHT", lc.PrixUnitaireHT);
                             cmd.Parameters.AddWithValue("@PrixUnitaireTTC", prixTTC);
-                            cmd.Parameters.AddWithValue("@PrixVente", article.PrixVente);
+                            cmd.Parameters.AddWithValue("@PrixVente", lc.PrixUnitaireTTC);
                             cmd.Parameters.AddWithValue("@PrixTotal", prixTotal);
                             cmd.Parameters.AddWithValue("@sousTotal", sousTotal);
                             cmd.Parameters.AddWithValue("@TauxTVA", article.TauxTVA);
                             cmd.Parameters.AddWithValue("@MontantTVA", montantTVA);
-                            cmd.Parameters.AddWithValue("@valeurRemise", article.valeurRemise);
+                            cmd.Parameters.AddWithValue("@valeurRemise", lc.ValeurRemise);
                             AddParameter(cmd, "@Specificite", article.Specificite);
                             AddParameter(cmd, "@DetailComposent", article.DetailComposent);
                             AddParameter(cmd, "@IdServeur", article.IdServeur);
@@ -399,7 +462,8 @@ namespace Api_BuildTech.Controllers.POS
                         UPDATE FACTURE
                         SET Sous_total = (SELECT ISNULL(SUM(sousTotal), 0) FROM DETAIL_TRANSACTIONS WHERE IdFacture = @Id AND estSupprimer = 0),
                             ValeurTVA = (SELECT ISNULL(SUM(MontantTVA), 0) FROM DETAIL_TRANSACTIONS WHERE IdFacture = @Id AND estSupprimer = 0),
-                            Total_final = (SELECT ISNULL(SUM(sousTotal), 0) + ISNULL(SUM(MontantTVA), 0) FROM DETAIL_TRANSACTIONS WHERE IdFacture = @Id AND estSupprimer = 0)
+                            Total_final = (SELECT ISNULL(SUM(PrixTotal), 0) FROM DETAIL_TRANSACTIONS WHERE IdFacture = @Id AND estSupprimer = 0),
+                            Montant = (SELECT ISNULL(SUM(PrixTotal), 0) FROM DETAIL_TRANSACTIONS WHERE IdFacture = @Id AND estSupprimer = 0)
                         WHERE id = @Id", conn, transaction))
                     {
                         cmd.Parameters.AddWithValue("@Id", factureId);
@@ -547,40 +611,44 @@ namespace Api_BuildTech.Controllers.POS
 
                         decimal sousTotal = 0;
                         decimal valeurTVA = 0;
+                        decimal totalNet = 0;
 
                         for (int i = 0; i < request.Articles.Count; i++)
                         {
                             var article = request.Articles[i];
                             var detailId = Guid.NewGuid();
 
-                            decimal prixTotal = article.Quantite * article.PrixUnitaireHT;
-                            decimal montantTVA = prixTotal * (article.TauxTVA / 100);
-                            decimal prixTTC = prixTotal + montantTVA;
-                            decimal sousItem = prixTotal - article.valeurRemise;
+                            // Logique caisse : prix saisis TTC, HT/TVA extraits, PrixTotal = net TTC apres remise
+                            var lc = CalculerLigne(article.Quantite, article.PrixUnitaireHT, article.PrixVente, article.TauxTVA, article.valeurRemise);
+                            decimal prixTotal = lc.PrixTotal;
+                            decimal montantTVA = lc.MontantTVA;
+                            decimal prixTTC = lc.PrixUnitaireTTC;
+                            decimal sousItem = lc.SousTotal;
 
                             sousTotal += sousItem;
                             valeurTVA += montantTVA;
+                            totalNet += prixTotal;
 
                             insertCmd.Parameters.AddWithValue($"@Id_{i}", detailId);
                             insertCmd.Parameters.AddWithValue($"@IdFacture_{i}", factureId);
                             insertCmd.Parameters.AddWithValue($"@IdArticle_{i}", article.IdArticle);
                             insertCmd.Parameters.AddWithValue($"@Designation_{i}", article.Designation ?? "");
-                            insertCmd.Parameters.AddWithValue($"@Quantité_{i}", article.Quantite);
-                            insertCmd.Parameters.AddWithValue($"@PrixUnitaireHT_{i}", article.PrixUnitaireHT);
+                            insertCmd.Parameters.AddWithValue($"@Quantite_{i}", article.Quantite);
+                            insertCmd.Parameters.AddWithValue($"@PrixUnitaireHT_{i}", lc.PrixUnitaireHT);
                             insertCmd.Parameters.AddWithValue($"@PrixUnitaireTTC_{i}", prixTTC);
-                            insertCmd.Parameters.AddWithValue($"@PrixVente_{i}", article.PrixVente);
+                            insertCmd.Parameters.AddWithValue($"@PrixVente_{i}", lc.PrixUnitaireTTC);
                             insertCmd.Parameters.AddWithValue($"@PrixTotal_{i}", prixTotal);
                             insertCmd.Parameters.AddWithValue($"@sousTotal_{i}", sousItem);
                             insertCmd.Parameters.AddWithValue($"@TauxTVA_{i}", article.TauxTVA);
                             insertCmd.Parameters.AddWithValue($"@MontantTVA_{i}", montantTVA);
-                            insertCmd.Parameters.AddWithValue($"@valeurRemise_{i}", article.valeurRemise);
+                            insertCmd.Parameters.AddWithValue($"@valeurRemise_{i}", lc.ValeurRemise);
                             AddParameter(insertCmd, $"@Specificite_{i}", article.Specificite);
                             AddParameter(insertCmd, $"@DetailComposent_{i}", article.DetailComposent);
                             AddParameter(insertCmd, $"@IdServeur_{i}", article.IdServeur);
                             AddParameter(insertCmd, $"@IdCuisinier_{i}", article.IdCuisinier);
 
                             valuesClauses.Add($@"(
-                        @Id_{i}, @IdFacture_{i}, @IdArticle_{i}, @Designation_{i}, @Quantité_{i},
+                        @Id_{i}, @IdFacture_{i}, @IdArticle_{i}, @Designation_{i}, @Quantite_{i},
                         @PrixUnitaireHT_{i}, @PrixUnitaireTTC_{i}, @PrixVente_{i}, @PrixTotal_{i},
                         @sousTotal_{i}, @TauxTVA_{i}, @MontantTVA_{i}, @valeurRemise_{i},
                         0, @Specificite_{i}, @DetailComposent_{i}, @DetailComposent_{i},
@@ -617,13 +685,14 @@ namespace Api_BuildTech.Controllers.POS
                     SET Sous_total = @Sous_total,
                         ValeurTVA = @ValeurTVA,
                         Total_final = @Total_final,
+                        Montant = @Total_final,
                         DateModification = @DateModification
                     WHERE id = @Id", conn, transaction))
                         {
                             cmd.Parameters.AddWithValue("@Id", factureId);
                             cmd.Parameters.AddWithValue("@Sous_total", sousTotal);
                             cmd.Parameters.AddWithValue("@ValeurTVA", valeurTVA);
-                            cmd.Parameters.AddWithValue("@Total_final", sousTotal + valeurTVA);
+                            cmd.Parameters.AddWithValue("@Total_final", totalNet);
                             cmd.Parameters.AddWithValue("@DateModification", currentDate);
 
                             await cmd.ExecuteNonQueryAsync();
@@ -645,7 +714,7 @@ namespace Api_BuildTech.Controllers.POS
                     response.Message = $"✅ CAS 2 : Facture mise en attente" +
                         (response.ArticlesAdded > 0 ? $" + {response.ArticlesAdded} articles mis à jour" : "");
                     response.OnHoldMode = "OnHold";
-                    response.Facture = new FactureDto
+                    response.Facture = await GetFactureByIdAsync(factureId) ?? new FactureDto
                     {
                         Id = factureId,
                         Etat = "En attente",
@@ -744,11 +813,9 @@ namespace Api_BuildTech.Controllers.POS
                 {
                     response.Factures.Add(MapFactureFromReader(reader));
                 }
-                if (response.Factures.Count() > 0)
-                {
-                    var details = await GetDetailsFactureAsync(response.Factures.FirstOrDefault(x => x.Id != null).Id);
-                    response.Details = details;
-                }
+                reader.Close();
+                if (response.Factures.Count > 0)
+                    response.Details = await GetDetailsFacturesAsync(response.Factures.Select(f => f.Id));
 
                 response.Total = response.Factures.Count;
             }
@@ -853,7 +920,7 @@ namespace Api_BuildTech.Controllers.POS
                     SELECT 
                         Id, Designation, EstDefaut, estSupprimer, IdEntreprise
                     FROM TYPE_PAIEMENT
-                    WHERE estSupprimer IS NULL 
+                    WHERE ISNULL(estSupprimer, 0) = 0 
                     ORDER BY EstDefaut DESC, Designation", conn);
 
                 //AddEntrepriseParameter(cmd);
@@ -917,19 +984,19 @@ namespace Api_BuildTech.Controllers.POS
 
                 using var conn = await GetConnectionAsync();
 
-                // Compter les factures d'aujourd'hui pour cette entreprise
+                // Dernier numero du jour (MAX, pas COUNT : un COUNT redonne un numero deja pris des qu'une facture
+                // est annulee ou supprimee -> doublons)
                 using var cmd = new SqlCommand(@"
-                    SELECT COUNT(*) 
-                    FROM FACTURE 
-                    WHERE IdEntreprise = @IdEntreprise 
-                    AND CAST(DateCreation AS DATE) = @Today
-                    AND Etat != 'Annulé'", conn);
+                    SELECT ISNULL(MAX(TRY_CAST(RIGHT(NumeroFacture, 4) AS INT)), 0)
+                    FROM FACTURE
+                    WHERE IdEntreprise = @IdEntreprise
+                      AND NumeroFacture LIKE @Prefixe", conn);
 
                 cmd.Parameters.AddWithValue("@IdEntreprise", enterpriseId);
-                cmd.Parameters.AddWithValue("@Today", today);
+                cmd.Parameters.AddWithValue("@Prefixe", $"POS-{today:yyyyMMdd}-%");
 
-                var count = (int?)await cmd.ExecuteScalarAsync() ?? 0;
-                var nextNumber = count + 1;
+                var dernier = Convert.ToInt32(await cmd.ExecuteScalarAsync() ?? 0);
+                var nextNumber = dernier + 1;
 
                 return $"POS-{today:yyyyMMdd}-{nextNumber:D4}";
             }
@@ -964,265 +1031,6 @@ namespace Api_BuildTech.Controllers.POS
         /// 4. Créer mouvements stock automatiquement
         /// 5. Tout dans une transaction atomique
         /// </summary>
-        //public async Task<PosPaymentResponse> CreateAndPayFactureAsync(ConfirmPosPaymentRequest request)
-        //{
-        //    var response = new PosPaymentResponse();
-
-        //    try
-        //    {
-        //        using var conn = new SqlConnection(_connectionString);
-        //        await conn.OpenAsync();
-
-        //        using var transaction = conn.BeginTransaction();
-
-        //        try
-        //        {
-        //            var currentUserId = GetUserIdFromContext();
-        //            var currentDate = DateTime.Now;
-        //            var enterpriseId = request.IdEntreprise ?? GetEntrepriseIdFromContext();
-        //            var factureId = Guid.NewGuid();
-
-        //            // ========================================
-        //            // ÉTAPE 0 : GÉNÉRER LE NUMÉRO DE FACTURE
-        //            // ========================================
-
-        //            string numeroFacture;
-        //            if (string.IsNullOrWhiteSpace(request.NumeroFacture))
-        //            {
-        //                // ✅ Générer automatiquement si non fourni
-        //                numeroFacture = await GetOrGenerateInvoiceNumberAsync(null);
-        //                _logger.LogInformation($"✅ Numéro de facture généré: {numeroFacture}");
-        //            }
-        //            else
-        //            {
-        //                // ✅ Utiliser le numéro fourni
-        //                numeroFacture = request.NumeroFacture.Trim();
-        //            }
-
-        //            // ========================================
-        //            // ÉTAPE 1 : CRÉER LA FACTURE
-        //            // ========================================
-
-        //            using (var cmd = new SqlCommand(@"
-        //                INSERT INTO FACTURE (
-        //                    id, NumeroFacture, Designation, DateCreation, Message,
-        //                    Montant, Sous_total, Total_final, MontantVerser, MonnaieRemis,
-        //                    RestApayer, Remise, Remise_globale, ValeurRemise_globale,
-        //                    ValeurTVA, TVA, BeneficeSurFact,
-        //                    IdTable, Caisse, Serveur, idUtilisateur, IdClient, IdEntreprise,
-        //                    idTypeService, IdSession, Etat, EstAnnuler, EstSupprimer,
-        //                    EstEnattente, Solder, DateModification, Statut
-        //                )
-        //                VALUES (
-        //                    @Id, @NumeroFacture, @Designation, @DateCreation, @Message,
-        //                    0, 0, 0, 0, 0,
-        //                    0, 0, 0, 0,
-        //                    0, 0, 0,
-        //                    @IdTable, @Caisse, @Serveur, @idUtilisateur, @IdClient, @IdEntreprise,
-        //                    NULL, @IdSession, 'En attente', 0, 0,
-        //                    0, 0, @DateModification, 'Ouvert'
-        //                )", conn, transaction))
-        //            {
-        //                cmd.Parameters.AddWithValue("@Id", factureId);
-        //                cmd.Parameters.AddWithValue("@NumeroFacture", numeroFacture);  // ✅ Utiliser le numéro généré
-        //                AddParameter(cmd, "@Designation", request.Designation);
-        //                cmd.Parameters.AddWithValue("@DateCreation", currentDate);
-        //                AddParameter(cmd, "@Message", request.Message);
-        //                AddParameter(cmd, "@IdTable", request.IdTable);
-        //                AddParameter(cmd, "@Caisse", request.Caisse);
-        //                AddParameter(cmd, "@Serveur", request.Serveur);
-        //                AddParameter(cmd, "@idUtilisateur", request.idUtilisateur ?? currentUserId);
-        //                AddParameter(cmd, "@IdClient", request.IdClient);
-        //                cmd.Parameters.AddWithValue("@IdEntreprise", enterpriseId);
-        //                AddParameter(cmd, "@IdSession", request.IdSession);
-        //                cmd.Parameters.AddWithValue("@DateModification", currentDate);
-
-        //                await cmd.ExecuteNonQueryAsync();
-        //            }
-
-        //            _logger.LogInformation($"✅ [CAS 1] Facture créée: {factureId} ({numeroFacture})");
-
-        //            // ========================================
-        //            // ÉTAPE 2 : AJOUTER TOUS LES ARTICLES
-        //            // ========================================
-
-        //            foreach (var article in request.Articles)
-        //            {
-        //                var detailId = Guid.NewGuid();
-
-        //                // Calculer les montants
-        //                decimal prixTotal = article.Quantite * article.PrixUnitaireHT;
-        //                decimal montantTVA = prixTotal * (article.TauxTVA / 100);
-        //                decimal prixTTC = prixTotal + montantTVA;
-        //                decimal sousTotal = prixTotal - article.valeurRemise;
-
-        //                using (var cmd = new SqlCommand(@"
-        //                    INSERT INTO DETAIL_TRANSACTIONS (
-        //                        Id, IdFacture, IdArticle, Designation, Quantite,
-        //                        PrixUnitaireHT, PrixUnitaireTTC, PrixVente, PrixTotal,
-        //                        sousTotal, TauxTVA, MontantTVA, valeurRemise,
-        //                        PrixAchatUnitaire, Specificite, DetailComposent, DetailComposant,
-        //                        IdServeur, IdCuisinier, IdUser, DesignationAgent, IdEntreprise,
-        //                        Etat, EstExecuter, estDetaileComd, estSupprimer, DateCreation,
-        //                        DateModification, IdUserModification
-        //                    )
-        //                    VALUES (
-        //                        @Id, @IdFacture, @IdArticle, @Designation, @Quantite,
-        //                        @PrixUnitaireHT, @PrixUnitaireTTC, @PrixVente, @PrixTotal,
-        //                        @sousTotal, @TauxTVA, @MontantTVA, @valeurRemise,
-        //                        0, @Specificite, @DetailComposent, @DetailComposent,
-        //                        @IdServeur, @IdCuisinier, @IdUser, @DesignationAgent, @IdEntreprise,
-        //                        'Actif', 0, 0, 0, @DateCreation,
-        //                        @DateModification, @IdUser
-        //                    )", conn, transaction))
-        //                {
-        //                    cmd.Parameters.AddWithValue("@Id", detailId);
-        //                    cmd.Parameters.AddWithValue("@IdFacture", factureId);
-        //                    cmd.Parameters.AddWithValue("@IdArticle", article.IdArticle);
-        //                    cmd.Parameters.AddWithValue("@Designation", article.Designation ?? "");
-        //                    cmd.Parameters.AddWithValue("@Quantite", article.Quantite);
-        //                    cmd.Parameters.AddWithValue("@PrixUnitaireHT", article.PrixUnitaireHT);
-        //                    cmd.Parameters.AddWithValue("@PrixUnitaireTTC", prixTTC);
-        //                    cmd.Parameters.AddWithValue("@PrixVente", article.PrixVente);
-        //                    cmd.Parameters.AddWithValue("@PrixTotal", prixTotal);
-        //                    cmd.Parameters.AddWithValue("@sousTotal", sousTotal);
-        //                    cmd.Parameters.AddWithValue("@TauxTVA", article.TauxTVA);
-        //                    cmd.Parameters.AddWithValue("@MontantTVA", montantTVA);
-        //                    cmd.Parameters.AddWithValue("@valeurRemise", article.valeurRemise);
-        //                    AddParameter(cmd, "@Specificite", article.Specificite);
-        //                    AddParameter(cmd, "@DetailComposent", article.DetailComposent);
-        //                    AddParameter(cmd, "@IdServeur", article.IdServeur);
-        //                    AddParameter(cmd, "@IdCuisinier", article.IdCuisinier);
-        //                    cmd.Parameters.AddWithValue("@IdUser", currentUserId);
-        //                    cmd.Parameters.AddWithValue("@DesignationAgent", "Agent POS");
-        //                    cmd.Parameters.AddWithValue("@IdEntreprise", enterpriseId);
-        //                    cmd.Parameters.AddWithValue("@DateCreation", currentDate);
-        //                    cmd.Parameters.AddWithValue("@DateModification", currentDate);
-
-        //                    await cmd.ExecuteNonQueryAsync();
-
-        //                    response.ArticlesAdded++;
-        //                }
-        //            }
-
-        //            _logger.LogInformation($"✅ [CAS 1] {response.ArticlesAdded} articles ajoutés à facture {factureId}");
-
-        //            // ========================================
-        //            // ÉTAPE 3 : METTRE À JOUR LES TOTAUX
-        //            // ========================================
-
-        //            using (var cmd = new SqlCommand(@"
-        //                UPDATE FACTURE
-        //                SET Sous_total = (SELECT ISNULL(SUM(sousTotal), 0) FROM DETAIL_TRANSACTIONS WHERE IdFacture = @Id AND estSupprimer = 0),
-        //                    ValeurTVA = (SELECT ISNULL(SUM(MontantTVA), 0) FROM DETAIL_TRANSACTIONS WHERE IdFacture = @Id AND estSupprimer = 0),
-        //                    Total_final = (SELECT ISNULL(SUM(sousTotal), 0) + ISNULL(SUM(MontantTVA), 0) FROM DETAIL_TRANSACTIONS WHERE IdFacture = @Id AND estSupprimer = 0)
-        //                WHERE id = @Id", conn, transaction))
-        //            {
-        //                cmd.Parameters.AddWithValue("@Id", factureId);
-        //                await cmd.ExecuteNonQueryAsync();
-        //            }
-
-        //            // ========================================
-        //            // ÉTAPE 4 : CONFIRMER LE PAIEMENT
-        //            // ========================================
-
-        //            decimal restApayer = Math.Max(0, request.MontantVerser);
-
-        //            using (var cmd = new SqlCommand(@"
-        //                UPDATE FACTURE
-        //                SET IdPayement = @IdPayement,
-        //                    MontantVerser = @MontantVerser,
-        //                    MonnaieRemis = @MonnaieRemis,
-        //                    RestApayer = @RestApayer,
-        //                    Remise = @Remise,
-        //                    Etat = 'Payé',
-        //                    Solder = @Solder,
-        //                    estestCloturer = 1,
-        //                    EstEnattente = 0,
-        //                    DateModification = @DateModification
-        //                WHERE id = @Id", conn, transaction))
-        //            {
-        //                cmd.Parameters.AddWithValue("@Id", factureId);
-        //                cmd.Parameters.AddWithValue("@IdPayement", request.IdPayement);
-        //                cmd.Parameters.AddWithValue("@MontantVerser", request.MontantVerser);
-        //                cmd.Parameters.AddWithValue("@MonnaieRemis", request.MonnaieRemis);
-        //                cmd.Parameters.AddWithValue("@RestApayer", restApayer);
-        //                cmd.Parameters.AddWithValue("@Remise", request.Remise);
-        //                cmd.Parameters.AddWithValue("@Solder", restApayer == 0);
-        //                cmd.Parameters.AddWithValue("@DateModification", currentDate);
-
-        //                await cmd.ExecuteNonQueryAsync();
-        //            }
-
-        //            _logger.LogInformation($"✅ [CAS 1] Paiement confirmé pour facture {factureId}");
-
-        //            // ========================================
-        //            // ÉTAPE 5 : CRÉER LES MOUVEMENTS STOCK
-        //            // ========================================
-
-        //            var details = await GetDetailsFactureAsync(factureId);
-
-        //            foreach (var detail in details)
-        //            {
-        //                var movementId = Guid.NewGuid();
-
-        //                using (var cmd = new SqlCommand(@"
-        //                    INSERT INTO MOUVEMENT_STOCK (
-        //                        Id, IdArticle, TypeMouvement, Quantite, PrixUnitaire,
-        //                        PrixTotal, DateTransaction, Reference, Utilisateur,
-        //                        idUtilsateur, IdEntreprise, Etat, idDetailTransaction
-        //                    )
-        //                    VALUES (
-        //                        @Id, @IdArticle, 'Sortie', @Quantite, @PrixUnitaire,
-        //                        @PrixTotal, @DateTransaction, @Reference, @Utilisateur,
-        //                        @idUtilsateur, @IdEntreprise, 'Actif', @idDetailTransaction
-        //                    )", conn, transaction))
-        //                {
-        //                    cmd.Parameters.AddWithValue("@Id", movementId);
-        //                    cmd.Parameters.AddWithValue("@IdArticle", detail.IdArticle);
-        //                    cmd.Parameters.AddWithValue("@Quantite", detail.Quantite);
-        //                    cmd.Parameters.AddWithValue("@PrixUnitaire", detail.PrixAchatUnitaire);
-        //                    cmd.Parameters.AddWithValue("@PrixTotal", detail.Quantite * detail.PrixAchatUnitaire);
-        //                    cmd.Parameters.AddWithValue("@DateTransaction", currentDate);
-        //                    cmd.Parameters.AddWithValue("@Reference", $"POS-{factureId:N}");
-        //                    cmd.Parameters.AddWithValue("@Utilisateur", "POS");
-        //                    cmd.Parameters.AddWithValue("@idUtilsateur", currentUserId);
-        //                    cmd.Parameters.AddWithValue("@IdEntreprise", enterpriseId);
-        //                    cmd.Parameters.AddWithValue("@idDetailTransaction", detail.Id);
-
-        //                    await cmd.ExecuteNonQueryAsync();
-
-        //                    response.StockMovementsCreated++;
-        //                }
-        //            }
-
-        //            transaction.Commit();
-
-        //            // Récupérer la facture finale
-        //            var facture = await GetFactureByIdAsync(factureId);
-
-        //            response.Success = true;
-        //            response.Message = $"✅ CAS 1 : Facture créée, {response.ArticlesAdded} articles ajoutés, paiement confirmé, {response.StockMovementsCreated} mouvements stock créés";
-        //            response.PaymentMode = "Created";
-        //            response.Facture = facture ?? new FactureDto { Id = factureId };
-
-        //            _logger.LogInformation($"✅ [CAS 1 COMPLET] Facture {factureId} créée, payée et finalisée");
-        //        }
-        //        catch (Exception ex)
-        //        {
-        //            transaction.Rollback();
-        //            throw;
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, $"[CAS 1] Erreur création + paiement facture");
-        //        response.Success = false;
-        //        response.Message = $"Erreur : {ex.Message}";
-        //    }
-
-        //    return response;
-        //}
         public async Task<PosPaymentResponse> CreateAndPayFactureAsync(ConfirmPosPaymentRequest request)
         {
             var response = new PosPaymentResponse();
@@ -1238,7 +1046,7 @@ namespace Api_BuildTech.Controllers.POS
                 {
                     var currentUserId = GetUserIdFromContext();
                     var currentDate = DateTime.Now;
-                    var enterpriseId = request.IdEntreprise ?? GetEntrepriseIdFromContext();
+                    var enterpriseId = GetEntrepriseIdFromContext();   // jamais depuis le corps de la requete
                     var factureId = Guid.NewGuid();
 
                     // ========================================
@@ -1299,8 +1107,10 @@ namespace Api_BuildTech.Controllers.POS
                         AddParameter(cmd, "@IdSession", request.IdSession);
                         cmd.Parameters.AddWithValue("@DateModification", currentDate);
 
-                        cmd.ExecuteNonQuery();  // ← Synchrone (plus rapide)
+                        await cmd.ExecuteNonQueryAsync();
                     }
+
+                    var detailIds = new List<Guid>();
 
                     // ========================================
                     // ÉTAPE 2 : AJOUTER ARTICLES (OPTIMISÉ - BATCHING)
@@ -1321,27 +1131,30 @@ namespace Api_BuildTech.Controllers.POS
                         {
                             var article = request.Articles[i];
                             var detailId = Guid.NewGuid();
+                            detailIds.Add(detailId);   // pour relier les mouvements de stock a leur ligne (annulation)
 
                             // Calculer les montants (SYNCHRONE, très rapide)
-                            decimal prixTotal = article.Quantite * article.PrixUnitaireHT;
-                            decimal montantTVA = prixTotal * (article.TauxTVA / 100);
-                            decimal prixTTC = prixTotal + montantTVA;
-                            decimal sousTotal = prixTotal - article.valeurRemise;
+                            // Logique caisse : prix saisis TTC, HT/TVA extraits, PrixTotal = net TTC apres remise
+                            var lc = CalculerLigne(article.Quantite, article.PrixUnitaireHT, article.PrixVente, article.TauxTVA, article.valeurRemise);
+                            decimal prixTotal = lc.PrixTotal;
+                            decimal montantTVA = lc.MontantTVA;
+                            decimal prixTTC = lc.PrixUnitaireTTC;
+                            decimal sousTotal = lc.SousTotal;
 
                             // Ajouter les paramètres
                             insertCmd.Parameters.AddWithValue($"@Id_{i}", detailId);
                             insertCmd.Parameters.AddWithValue($"@IdFacture_{i}", factureId);
                             insertCmd.Parameters.AddWithValue($"@IdArticle_{i}", article.IdArticle);
                             insertCmd.Parameters.AddWithValue($"@Designation_{i}", article.Designation ?? "");
-                            insertCmd.Parameters.AddWithValue($"@Quantité_{i}", article.Quantite);
-                            insertCmd.Parameters.AddWithValue($"@PrixUnitaireHT_{i}", article.PrixUnitaireHT);
+                            insertCmd.Parameters.AddWithValue($"@Quantite_{i}", article.Quantite);
+                            insertCmd.Parameters.AddWithValue($"@PrixUnitaireHT_{i}", lc.PrixUnitaireHT);
                             insertCmd.Parameters.AddWithValue($"@PrixUnitaireTTC_{i}", prixTTC);
-                            insertCmd.Parameters.AddWithValue($"@PrixVente_{i}", article.PrixVente);
+                            insertCmd.Parameters.AddWithValue($"@PrixVente_{i}", lc.PrixUnitaireTTC);
                             insertCmd.Parameters.AddWithValue($"@PrixTotal_{i}", prixTotal);
                             insertCmd.Parameters.AddWithValue($"@sousTotal_{i}", sousTotal);
                             insertCmd.Parameters.AddWithValue($"@TauxTVA_{i}", article.TauxTVA);
                             insertCmd.Parameters.AddWithValue($"@MontantTVA_{i}", montantTVA);
-                            insertCmd.Parameters.AddWithValue($"@valeurRemise_{i}", article.valeurRemise);
+                            insertCmd.Parameters.AddWithValue($"@valeurRemise_{i}", lc.ValeurRemise);
                             AddParameter(insertCmd, $"@Specificite_{i}", article.Specificite);
                             AddParameter(insertCmd, $"@DetailComposent_{i}", article.DetailComposent);
                             AddParameter(insertCmd, $"@IdServeur_{i}", article.IdServeur);
@@ -1350,7 +1163,7 @@ namespace Api_BuildTech.Controllers.POS
 
                             // Ajouter VALUE clause
                             valuesClauses.Add($@"(
-                        @Id_{i}, @IdFacture_{i}, @IdArticle_{i}, @Designation_{i}, @Quantité_{i},
+                        @Id_{i}, @IdFacture_{i}, @IdArticle_{i}, @Designation_{i}, @Quantite_{i},
                         @PrixUnitaireHT_{i}, @PrixUnitaireTTC_{i}, @PrixVente_{i}, @PrixTotal_{i},
                         @sousTotal_{i}, @TauxTVA_{i}, @MontantTVA_{i}, @valeurRemise_{i},
                         0, @Specificite_{i}, @DetailComposent_{i},
@@ -1379,7 +1192,7 @@ namespace Api_BuildTech.Controllers.POS
                     )
                     VALUES {string.Join(",", valuesClauses)}";
 
-                        insertCmd.ExecuteNonQuery();  // ← 1 requête au lieu de N!
+                        await insertCmd.ExecuteNonQueryAsync();   // 1 requete multi-ligne
                     }
 
                     // ========================================
@@ -1390,11 +1203,12 @@ namespace Api_BuildTech.Controllers.POS
                 UPDATE FACTURE
                 SET Sous_total = (SELECT ISNULL(SUM(sousTotal), 0) FROM DETAIL_TRANSACTIONS WHERE IdFacture = @Id AND estSupprimer = 0),
                     ValeurTVA = (SELECT ISNULL(SUM(MontantTVA), 0) FROM DETAIL_TRANSACTIONS WHERE IdFacture = @Id AND estSupprimer = 0),
-                    Total_final = (SELECT ISNULL(SUM(sousTotal), 0) + ISNULL(SUM(MontantTVA), 0) FROM DETAIL_TRANSACTIONS WHERE IdFacture = @Id AND estSupprimer = 0)
+                    Total_final = (SELECT ISNULL(SUM(PrixTotal), 0) FROM DETAIL_TRANSACTIONS WHERE IdFacture = @Id AND estSupprimer = 0),
+                            Montant = (SELECT ISNULL(SUM(PrixTotal), 0) FROM DETAIL_TRANSACTIONS WHERE IdFacture = @Id AND estSupprimer = 0)
                 WHERE id = @Id", conn, transaction))
                     {
                         cmd.Parameters.AddWithValue("@Id", factureId);
-                        cmd.ExecuteNonQuery();  // ← Synchrone
+                        await cmd.ExecuteNonQueryAsync();
                     }
 
                     // ========================================
@@ -1417,12 +1231,14 @@ namespace Api_BuildTech.Controllers.POS
                         cmd.Parameters.AddWithValue("@IdTypePaiement", request.IdPayement);
                         cmd.Parameters.AddWithValue("@MontantPaye", request.MontantVerser);
                         cmd.Parameters.AddWithValue("@DatePaiement", currentDate);
-                        cmd.Parameters.AddWithValue("@IdUser", currentUserId);
+                        // Meme utilisateur que la facture : compte web (COMPTES_WEB) ou utilisateur local (UTILISATEURS).
+                        // Controle par le trigger TR_PAIEMENTS_ValiderUser (script 13).
+                        cmd.Parameters.AddWithValue("@IdUser", request.idUtilisateur ?? currentUserId);
                         cmd.Parameters.AddWithValue("@IdEntreprise", enterpriseId);
                         cmd.Parameters.AddWithValue("@DateCreation", currentDate);
                         cmd.Parameters.AddWithValue("@DateModification", currentDate);
 
-                        cmd.ExecuteNonQuery();  // ← Synchrone
+                        await cmd.ExecuteNonQueryAsync();
                     }
 
                     // ========================================
@@ -1431,17 +1247,26 @@ namespace Api_BuildTech.Controllers.POS
 
                     using (var cmd = new SqlCommand(@"
                 UPDATE FACTURE
-                SET Etat = 'Payé',
+                SET IdPayement = @IdPayement,
+                    Etat = 'Payé',
                     MontantVerser = @MontantVerser,
-                    RestApayer = Total_final - @MontantVerser,
+                    MonnaieRemis = @MonnaieRemis,
+                    Remise = @Remise,
+                    RestApayer = CASE WHEN Total_final - @MontantVerser > 0 THEN Total_final - @MontantVerser ELSE 0 END,
+                    Solder = CASE WHEN Total_final - @MontantVerser > 0 THEN 0 ELSE 1 END,
+                    estestCloturer = 0,
+                    EstEnattente = 0,
                     DateModification = @DateModification
                 WHERE id = @Id", conn, transaction))
                     {
                         cmd.Parameters.AddWithValue("@Id", factureId);
+                        cmd.Parameters.AddWithValue("@IdPayement", request.IdPayement);
                         cmd.Parameters.AddWithValue("@MontantVerser", request.MontantVerser);
+                        cmd.Parameters.AddWithValue("@MonnaieRemis", request.MonnaieRemis);
+                        cmd.Parameters.AddWithValue("@Remise", request.Remise);
                         cmd.Parameters.AddWithValue("@DateModification", currentDate);
 
-                        cmd.ExecuteNonQuery();  // ← Synchrone
+                        await cmd.ExecuteNonQueryAsync();
                     }
 
                     // ========================================
@@ -1451,57 +1276,14 @@ namespace Api_BuildTech.Controllers.POS
                     // ⚡ OPTIMISATION: Batching des SORTIES
                     if (request.Articles != null && request.Articles.Count > 0)
                     {
-                        var movementClauses = new List<string>();
-                        var movementCmd = new SqlCommand { Connection = conn, Transaction = transaction };
-
+                        var reference = $"POS-PAY-{currentDate:yyyyMMddHHmmss}";
                         for (int i = 0; i < request.Articles.Count; i++)
                         {
                             var article = request.Articles[i];
-                            decimal montant = article.Quantite * article.PrixUnitaireHT;
-
-                            movementCmd.Parameters.AddWithValue($"@IdArticle_{i}", article.IdArticle);
-                            movementCmd.Parameters.AddWithValue($"@Quantité_{i}", article.Quantite);
-                            movementCmd.Parameters.AddWithValue($"@PrixUnitaire_{i}", article.PrixUnitaireHT);
-                            movementCmd.Parameters.AddWithValue($"@Montant_{i}", montant);
-
-                            movementClauses.Add($@"(
-                                DEFAULT,
-                                @DateTransaction,
-                                @IdArticle_{i},
-                                0,
-                                'SORTIE',
-                                NULL,
-                                @idUtilisateur,
-                                @IdEntreprise,
-                                NULL,
-                                'Validé',
-                                @Quantité_{i},
-                                @PrixUnitaire_{i},
-                                @Montant_{i},
-                                @Reference,
-                                'Sortie POS - Vente',
-                                'Paiement'
-                            )");
-
+                            await CreerSortieStockVenteAsync(conn, transaction, enterpriseId, currentUserId, currentDate,
+                                reference, article.IdArticle, detailIds[i], article.Quantite, article.PrixUnitaireHT);
                             response.StockMovementsCreated++;
                         }
-
-                        movementCmd.Parameters.AddWithValue("@DateTransaction", currentDate);
-                        movementCmd.Parameters.AddWithValue("@idUtilisateur", currentUserId);
-                        movementCmd.Parameters.AddWithValue("@IdEntreprise", enterpriseId);
-                        movementCmd.Parameters.AddWithValue("@Reference", $"POS-PAY-{currentDate:yyyyMMddHHmmss}");
-
-                        movementCmd.CommandText = $@"
-                            INSERT INTO MOUVEMENT_STOCK (
-                                Id, DateTransaction, IdArticle, EstAvarier,
-                                TypeMouvement, idDetailTransaction, idUtilsateur, IdEntreprise,
-                                IdStock, Etat, Quantite, PrixUnitaire,
-                                Montant, Reference, Commentaire, Motif
-                            )
-                            VALUES {string.Join(",", movementClauses)}";
-
-                        movementCmd.ExecuteNonQuery();  // ← 1 requête multi-ligne
-                        response.StockMovementsCreated = request.Articles.Count;
                     }
 
                     transaction.Commit();
@@ -1558,7 +1340,24 @@ namespace Api_BuildTech.Controllers.POS
                 if (existingFacture == null)
                 {
                     response.Success = false;
+                    response.ErrorCode = "NOT_FOUND";
                     response.Message = $"Facture {request.IdFacture} introuvable";
+                    return response;
+                }
+
+                // Garde-fous : evite un double paiement (et donc des mouvements de stock en double)
+                if (existingFacture.EstAnnuler || existingFacture.EstSupprimer)
+                {
+                    response.Success = false;
+                    response.ErrorCode = "CANCELLED";
+                    response.Message = "Facture annulée ou supprimée : paiement impossible";
+                    return response;
+                }
+                if (string.Equals(existingFacture.Etat, "Payé", StringComparison.OrdinalIgnoreCase))
+                {
+                    response.Success = false;
+                    response.ErrorCode = "ALREADY_PAID";
+                    response.Message = "Facture déjà payée";
                     return response;
                 }
 
@@ -1568,6 +1367,7 @@ namespace Api_BuildTech.Controllers.POS
                 {
                     var currentDate = DateTime.Now;
                     var currentUserId = GetUserIdFromContext();
+                    var enterpriseId = GetEntrepriseIdFromContext();
 
                     // ========================================
                     // ÉTAPE 1 : CONFIRMER LE PAIEMENT
@@ -1587,7 +1387,7 @@ namespace Api_BuildTech.Controllers.POS
                             estestCloturer = 0,
                             EstEnattente = 0,
                             DateModification = @DateModification
-                        WHERE id = @Id AND IdEntreprise = @IdEntreprise", conn, transaction))
+                        WHERE id = @Id AND IdEntreprise = @IdEntreprise AND Etat <> 'Payé'", conn, transaction))
                     {
                         cmd.Parameters.AddWithValue("@Id", request.IdFacture);
                         cmd.Parameters.AddWithValue("@IdPayement", request.IdPayement);
@@ -1610,39 +1410,12 @@ namespace Api_BuildTech.Controllers.POS
 
                     var details = await GetDetailsFactureAsync(request.IdFacture ?? Guid.Empty);
 
+                    var reference = $"POS-PAY-{currentDate:yyyyMMddHHmmss}";
                     foreach (var detail in details)
                     {
-                        var movementId = Guid.NewGuid();
-
-                        using (var cmd = new SqlCommand(@"
-                            INSERT INTO MOUVEMENT_STOCK (
-                                Id, IdArticle, TypeMouvement, Quantite, PrixUnitaire,
-                                Montant, DateTransaction, Reference,Commentaire, Utilisateur,
-                                idUtilsateur, IdEntreprise, Etat, idDetailTransaction
-                            )
-                            VALUES (
-                                @Id, @IdArticle, 'SORTIE', @Quantite, @PrixUnitaire,
-                                @Montant, @DateTransaction, @Reference, @Commentaire, @Utilisateur,
-                                @idUtilsateur, @IdEntreprise, 'Actif', @idDetailTransaction
-                            )", conn, transaction))
-                        {
-                            cmd.Parameters.AddWithValue("@Id", movementId);
-                            cmd.Parameters.AddWithValue("@IdArticle", detail.IdArticle);
-                            cmd.Parameters.AddWithValue("@Quantite", detail.Quantite);
-                            cmd.Parameters.AddWithValue("@PrixUnitaire", detail.PrixVente);
-                            cmd.Parameters.AddWithValue("@Montant", detail.Quantite * detail.PrixVente);
-                            cmd.Parameters.AddWithValue("@DateTransaction", currentDate);
-                            cmd.Parameters.AddWithValue("@Reference", $"POS-PAY-{currentDate:yyyyMMddHHmmss}");
-                            cmd.Parameters.AddWithValue("@Commentaire", "Sortie POS - Vente");
-                            cmd.Parameters.AddWithValue("@Utilisateur", "POS");
-                            cmd.Parameters.AddWithValue("@idUtilsateur", currentUserId);
-                            cmd.Parameters.AddWithValue("@IdEntreprise", GetEntrepriseIdFromContext());
-                            cmd.Parameters.AddWithValue("@idDetailTransaction", detail.Id);
-
-                            await cmd.ExecuteNonQueryAsync();
-
-                            response.StockMovementsCreated++;
-                        }
+                        await CreerSortieStockVenteAsync(conn, transaction, enterpriseId, currentUserId, currentDate,
+                            reference, detail.IdArticle, detail.Id, detail.Quantite, detail.PrixUnitaireHT);
+                        response.StockMovementsCreated++;
                     }
 
                     transaction.Commit();
@@ -1737,9 +1510,10 @@ namespace Api_BuildTech.Controllers.POS
                         EstAvarie, AutorisationModif, idDomaine, idTypeService,
                         DateCreation, DateModification, IdUserModification
                     FROM DETAIL_TRANSACTIONS
-                    WHERE Id = @Id", conn);
+                    WHERE Id = @Id " + BuildWhereClause(), conn);
 
                 cmd.Parameters.AddWithValue("@Id", idDetail);
+                AddEntrepriseParameter(cmd);
 
                 using var reader = await cmd.ExecuteReaderAsync();
 
@@ -1766,7 +1540,8 @@ namespace Api_BuildTech.Controllers.POS
                     UPDATE FACTURE
                     SET Sous_total = (SELECT ISNULL(SUM(sousTotal), 0) FROM DETAIL_TRANSACTIONS WHERE IdFacture = @Id AND estSupprimer = 0),
                         ValeurTVA = (SELECT ISNULL(SUM(MontantTVA), 0) FROM DETAIL_TRANSACTIONS WHERE IdFacture = @Id AND estSupprimer = 0),
-                        Total_final = (SELECT ISNULL(SUM(sousTotal), 0) + ISNULL(SUM(MontantTVA), 0) FROM DETAIL_TRANSACTIONS WHERE IdFacture = @Id AND estSupprimer = 0)
+                        Total_final = (SELECT ISNULL(SUM(PrixTotal), 0) FROM DETAIL_TRANSACTIONS WHERE IdFacture = @Id AND estSupprimer = 0),
+                            Montant = (SELECT ISNULL(SUM(PrixTotal), 0) FROM DETAIL_TRANSACTIONS WHERE IdFacture = @Id AND estSupprimer = 0)
                     WHERE id = @Id", conn);
 
                 cmd.Parameters.AddWithValue("@Id", idFacture);
@@ -1779,28 +1554,158 @@ namespace Api_BuildTech.Controllers.POS
             }
         }
 
+        /// <summary>
+        /// Annule les sorties de stock d'une facture : remet les quantites dans STOCK puis marque les mouvements 'Annulé'.
+        /// Idempotent (un mouvement deja annule n'est jamais re-credite).
+        /// </summary>
         private async Task ReverseStockMovementsAsync(Guid idFacture)
         {
             try
             {
+                var enterpriseId = GetEntrepriseIdFromContext();
                 using var conn = await GetConnectionAsync();
+                using var tx = conn.BeginTransaction();
 
-                using var cmd = new SqlCommand(@"
-                    UPDATE MOUVEMENT_STOCK
-                    SET Etat = 'Annulé'
-                    WHERE idDetailTransaction IN (
-                        SELECT Id FROM DETAIL_TRANSACTIONS WHERE IdFacture = @IdFacture
-                    )", conn);
+                var aRestituer = new List<(Guid IdMouvement, Guid? IdArticle, decimal Quantite)>();
+                using (var cmd = new SqlCommand(@"
+                    SELECT m.Id, m.IdArticle, ISNULL(m.Quantite, 0)
+                    FROM MOUVEMENT_STOCK m
+                    WHERE m.IdEntreprise = @IdEntreprise
+                      AND m.idDetailTransaction IN (SELECT Id FROM DETAIL_TRANSACTIONS WHERE IdFacture = @IdFacture AND IdEntreprise = @IdEntreprise)
+                      AND (m.Etat IS NULL OR m.Etat NOT IN ('Annulé', 'Supprimer'))
+                      AND LTRIM(m.TypeMouvement) LIKE 'Sortie%'", conn, tx))
+                {
+                    cmd.Parameters.AddWithValue("@IdFacture", idFacture);
+                    cmd.Parameters.AddWithValue("@IdEntreprise", enterpriseId);
+                    using var reader = await cmd.ExecuteReaderAsync();
+                    while (await reader.ReadAsync())
+                        aRestituer.Add((reader.GetGuid(0), reader.IsDBNull(1) ? null : reader.GetGuid(1), Convert.ToDecimal(reader.GetValue(2))));
+                }
 
-                cmd.Parameters.AddWithValue("@IdFacture", idFacture);
+                foreach (var m in aRestituer)
+                {
+                    if (m.IdArticle.HasValue)
+                        await AjusterStockAsync(conn, tx, enterpriseId, m.IdArticle.Value, +m.Quantite);
 
-                await cmd.ExecuteNonQueryAsync();
+                    using var up = new SqlCommand("UPDATE MOUVEMENT_STOCK SET Etat = 'Annulé' WHERE Id = @Id", conn, tx);
+                    up.Parameters.AddWithValue("@Id", m.IdMouvement);
+                    await up.ExecuteNonQueryAsync();
+                }
+
+                tx.Commit();
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Erreur inversion mouvements stock POS {idFacture}");
             }
         }
+
+        // ========================================
+        // STOCK : sortie de vente (STOCK.Quantite + mouvement) - meme logique que l'ecran de caisse
+        // ========================================
+
+        private sealed record StockMaj(bool Trouve, decimal? Avant, decimal? Apres, Guid? IdStock);
+
+        /// <summary>
+        /// Ajoute `delta` a STOCK.Quantite (negatif = sortie). Sans ligne STOCK pour l'article : rien n'est modifie.
+        /// </summary>
+        private async Task<StockMaj> AjusterStockAsync(SqlConnection conn, SqlTransaction tx, Guid entrepriseId, Guid idArticle, decimal delta)
+        {
+            // STOCK porte des triggers (CDC de synchronisation) : OUTPUT doit alors etre "INTO" une variable table.
+            using var cmd = new SqlCommand(@"
+                DECLARE @r TABLE (Avant DECIMAL(28, 6) NULL, Apres DECIMAL(28, 6) NULL, IdStock UNIQUEIDENTIFIER NULL);
+
+                UPDATE TOP (1) STOCK
+                   SET Quantite = ISNULL(Quantite, 0) + @Delta,
+                       DateModification = @Now
+                OUTPUT deleted.Quantite, inserted.Quantite, inserted.Id INTO @r (Avant, Apres, IdStock)
+                 WHERE IdArticle = @IdArticle AND IdEntreprise = @IdEntreprise;
+
+                SELECT Avant, Apres, IdStock FROM @r;", conn, tx);
+            cmd.Parameters.AddWithValue("@Delta", delta);
+            cmd.Parameters.AddWithValue("@Now", DateTime.Now);
+            cmd.Parameters.AddWithValue("@IdArticle", idArticle);
+            cmd.Parameters.AddWithValue("@IdEntreprise", entrepriseId);
+
+            using var reader = await cmd.ExecuteReaderAsync();
+            if (!await reader.ReadAsync()) return new StockMaj(false, null, null, null);
+
+            decimal? avant = reader.IsDBNull(0) ? null : Convert.ToDecimal(reader.GetValue(0));
+            decimal? apres = reader.IsDBNull(1) ? null : Convert.ToDecimal(reader.GetValue(1));
+            Guid? idStock = reader.IsDBNull(2) ? null : reader.GetGuid(2);
+            return new StockMaj(true, avant, apres, idStock);
+        }
+
+        /// <summary>
+        /// Une ligne vendue : decremente STOCK.Quantite puis ecrit le mouvement 'Sortie' (QuantiteAvant/Apres,
+        /// relie a la ligne de facture pour pouvoir etre annule). Meme code pour le CAS 1 et le CAS 2.
+        /// </summary>
+        private async Task CreerSortieStockVenteAsync(
+            SqlConnection conn, SqlTransaction tx, Guid entrepriseId, Guid userId, DateTime date,
+            string reference, Guid idArticle, Guid? idDetailTransaction, decimal quantite, decimal prixUnitaireHT)
+        {
+            var stock = await AjusterStockAsync(conn, tx, entrepriseId, idArticle, -quantite);
+
+            using var cmd = new SqlCommand(@"
+                INSERT INTO MOUVEMENT_STOCK (
+                    Id, DateTransaction, IdArticle, EstAvarier, TypeMouvement, idDetailTransaction,
+                    idUtilsateur, IdEntreprise, IdStock, Etat, Quantite, PrixUnitaire, Montant, PrixTotal,
+                    QuantiteAvant, QuantiteApres, Reference, Commentaire, Motif, Utilisateur
+                )
+                VALUES (
+                    NEWID(), @DateTransaction, @IdArticle, 0, 'Sortie', @idDetailTransaction,
+                    @idUtilsateur, @IdEntreprise, @IdStock, 'Actif', @Quantite, @PrixUnitaire, @Montant, @Montant,
+                    @QuantiteAvant, @QuantiteApres, @Reference, 'Sortie POS - Vente', 'Paiement', 'POS'
+                )", conn, tx);
+
+            cmd.Parameters.AddWithValue("@DateTransaction", date);
+            cmd.Parameters.AddWithValue("@IdArticle", idArticle);
+            AddParameter(cmd, "@idDetailTransaction", idDetailTransaction);
+            cmd.Parameters.AddWithValue("@idUtilsateur", userId);
+            cmd.Parameters.AddWithValue("@IdEntreprise", entrepriseId);
+            AddParameter(cmd, "@IdStock", stock.IdStock);
+            cmd.Parameters.AddWithValue("@Quantite", quantite);
+            cmd.Parameters.AddWithValue("@PrixUnitaire", prixUnitaireHT);
+            cmd.Parameters.AddWithValue("@Montant", quantite * prixUnitaireHT);
+            AddParameter(cmd, "@QuantiteAvant", stock.Avant);
+            AddParameter(cmd, "@QuantiteApres", stock.Apres);
+            cmd.Parameters.AddWithValue("@Reference", reference);
+
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        // ====================================================================
+        // CALCUL D'UNE LIGNE - meme logique que la caisse (NouvelleFacture / MagasinPos)
+        //   - prix de vente saisi TTC ; HT unitaire = TTC / (1 + taux), arrondi a 2
+        //   - sousTotal   = quantite x prix unitaire TTC            (TTC avant remise)
+        //   - PrixTotal   = sousTotal - valeurRemise                 (NET TTC de la ligne)
+        //   - MontantTVA  = PrixTotal - PrixTotal / (1 + taux)       (TVA extraite, apres remise)
+        //   FACTURE : Sous_total = SUM(sousTotal) | ValeurTVA = SUM(MontantTVA)
+        //             Total_final = Montant = SUM(PrixTotal)
+        // ====================================================================
+        private sealed record LigneCalculee(
+            decimal PrixUnitaireHT, decimal PrixUnitaireTTC, decimal SousTotal,
+            decimal ValeurRemise, decimal PrixTotal, decimal MontantTVA);
+
+        private static LigneCalculee CalculerLigne(decimal quantite, decimal prixUnitaireHT, decimal prixVente,
+                                                   decimal tauxTVA, decimal valeurRemise)
+        {
+            var t = Math.Max(tauxTVA, 0m) / 100m;
+            var puTTC = prixVente > 0 ? prixVente : Math.Round(prixUnitaireHT * (1 + t), 2);
+            var puHT = Math.Round(puTTC / (1 + t), 2);
+            var brut = Math.Round(quantite * puTTC, 2);
+            var remise = Math.Min(Math.Max(valeurRemise, 0m), brut);
+            var net = brut - remise;
+            var ht = Math.Round(net / (1 + t), 2);
+            return new LigneCalculee(puHT, puTTC, brut, remise, net, net - ht);
+        }
+
+        /// <summary>Lecture decimale securisee : NULL (ou colonne absente) => 0.</summary>
+        private static decimal ReadDec(SqlDataReader reader, string name)
+            => ReadDec(reader, reader.GetOrdinal(name));
+
+        private static decimal ReadDec(SqlDataReader reader, int i)
+            => reader.IsDBNull(i) ? 0m : Convert.ToDecimal(reader.GetValue(i));
 
         private FactureDto MapFactureFromReader(SqlDataReader reader)
         {
@@ -1812,18 +1717,18 @@ namespace Api_BuildTech.Controllers.POS
                 DateCreation = reader.GetDateTime(reader.GetOrdinal("DateCreation")),
                 DateModification = ReadNullableDateTime(reader, "DateModification"),
                 Message = ReadNullableString(reader, "Message"),
-                Montant = reader.GetDecimal(reader.GetOrdinal("Montant")),
-                Sous_total = reader.GetDecimal(reader.GetOrdinal("Sous_total")),
-                Total_final = reader.GetDecimal(reader.GetOrdinal("Total_final")),
-                MontantVerser = reader.GetDecimal(reader.GetOrdinal("MontantVerser")),
-                MonnaieRemis = reader.GetDecimal(reader.GetOrdinal("MonnaieRemis")),
-                RestApayer = reader.GetDecimal(reader.GetOrdinal("RestApayer")),
-                Remise = reader.GetDecimal(reader.GetOrdinal("Remise")),
-                Remise_globale = reader.GetDecimal(reader.GetOrdinal("Remise_globale")),
-                ValeurRemise_globale = reader.GetDecimal(reader.GetOrdinal("ValeurRemise_globale")),
-                ValeurTVA = reader.GetDecimal(reader.GetOrdinal("ValeurTVA")),
-                TVA = reader.GetDecimal(reader.GetOrdinal("TVA")),
-                BeneficeSurFact = reader.GetDecimal(reader.GetOrdinal("BeneficeSurFact")),
+                Montant = ReadDec(reader, "Montant"),
+                Sous_total = ReadDec(reader, "Sous_total"),
+                Total_final = ReadDec(reader, "Total_final"),
+                MontantVerser = ReadDec(reader, "MontantVerser"),
+                MonnaieRemis = ReadDec(reader, "MonnaieRemis"),
+                RestApayer = ReadDec(reader, "RestApayer"),
+                Remise = ReadDec(reader, "Remise"),
+                Remise_globale = ReadDec(reader, "Remise_globale"),
+                ValeurRemise_globale = ReadDec(reader, "ValeurRemise_globale"),
+                ValeurTVA = ReadDec(reader, "ValeurTVA"),
+                TVA = ReadDec(reader, "TVA"),
+                BeneficeSurFact = ReadDec(reader, "BeneficeSurFact"),
                 IdTable = ReadNullableGuid(reader, "IdTable"),
                 DesignationTable = ReadNullableString(reader, "DesignationTable"),
                 IdPayement = ReadNullableGuid(reader, "IdPayement"),
@@ -1852,16 +1757,16 @@ namespace Api_BuildTech.Controllers.POS
             {
                 Id = reader.GetGuid(reader.GetOrdinal("Id")),
                 Designation = ReadNullableString(reader, "Designation"),
-                Quantite = reader.GetDecimal(reader.GetOrdinal("Quantite")),
-                PrixUnitaireHT = reader.GetDecimal(reader.GetOrdinal("PrixUnitaireHT")),
-                PrixUnitaireTTC = reader.GetDecimal(reader.GetOrdinal("PrixUnitaireTTC")),
-                PrixVente = reader.GetDecimal(reader.GetOrdinal("PrixVente")),
-                PrixTotal = reader.GetDecimal(reader.GetOrdinal("PrixTotal")),
-                sousTotal = reader.GetDecimal(reader.GetOrdinal("sousTotal")),
-                TauxTVA = reader.GetDecimal(reader.GetOrdinal("TauxTVA")),
-                MontantTVA = reader.GetDecimal(reader.GetOrdinal("MontantTVA")),
-                valeurRemise = reader.GetDecimal(reader.GetOrdinal("valeurRemise")),
-                PrixAchatUnitaire = reader.GetDecimal(reader.GetOrdinal("PrixAchatUnitaire")),
+                Quantite = ReadDec(reader, "Quantite"),
+                PrixUnitaireHT = ReadDec(reader, "PrixUnitaireHT"),
+                PrixUnitaireTTC = ReadDec(reader, "PrixUnitaireTTC"),
+                PrixVente = ReadDec(reader, "PrixVente"),
+                PrixTotal = ReadDec(reader, "PrixTotal"),
+                sousTotal = ReadDec(reader, "sousTotal"),
+                TauxTVA = ReadDec(reader, "TauxTVA"),
+                MontantTVA = ReadDec(reader, "MontantTVA"),
+                valeurRemise = ReadDec(reader, "valeurRemise"),
+                PrixAchatUnitaire = ReadDec(reader, "PrixAchatUnitaire"),
                 Specificite = ReadNullableString(reader, "Specificite"),
                 DetailComposent = ReadNullableString(reader, "DetailComposent"),
                 DetailComposant = ReadNullableString(reader, "DetailComposant"),
@@ -1939,10 +1844,10 @@ namespace Api_BuildTech.Controllers.POS
                     if (await reader.ReadAsync())
                     {
                         response.NombreVentes = reader.GetInt32(0);
-                        response.SousTotal = reader.GetDecimal(1);
-                        response.TotalTVA = reader.GetDecimal(2);
-                        response.ChiffreAffaires = reader.GetDecimal(3);
-                        response.TotalRemises = reader.GetDecimal(4);
+                        response.SousTotal = ReadDec(reader, 1);
+                        response.TotalTVA = ReadDec(reader, 2);
+                        response.ChiffreAffaires = ReadDec(reader, 3);
+                        response.TotalRemises = ReadDec(reader, 4);
 
                         // Calculer le panier moyen EN MÉMOIRE
                         response.PanierMoyen = response.NombreVentes > 0
@@ -1989,56 +1894,55 @@ namespace Api_BuildTech.Controllers.POS
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                // ÉTAPE 1: Compter total lignes
+                // ETAPE 1 : total de lignes ET totaux de TOUTE la periode (factures payees, comme le rapport Quantite et les stats)
                 int totalLignes = 0;
+                decimal sousTotal = 0, totalTVA = 0, totalGeneral = 0;
                 using (var cmd = new SqlCommand(@"
-            SELECT COUNT(*) FROM FACTURE
-            WHERE IdEntreprise = @IdEntreprise
-            AND CAST(DateCreation AS DATE) >= @DateDebut
-            AND CAST(DateCreation AS DATE) <= @DateFin
-            AND Etat = 'Payé'
-            AND EstAnnuler = 0
-            AND EstSupprimer = 0", conn))
+                    SELECT COUNT(*),
+                           ISNULL(SUM(Sous_total), 0),
+                           ISNULL(SUM(ValeurTVA), 0),
+                           ISNULL(SUM(Total_final), 0)
+                    FROM FACTURE
+                    WHERE IdEntreprise = @IdEntreprise
+                      AND CAST(DateCreation AS DATE) >= @DateDebut
+                      AND CAST(DateCreation AS DATE) <= @DateFin
+                      AND EstAnnuler = 0
+                      AND EstSupprimer = 0", conn))
                 {
                     cmd.Parameters.AddWithValue("@IdEntreprise", entrepriseId);
                     cmd.Parameters.AddWithValue("@DateDebut", dateDebut);
                     cmd.Parameters.AddWithValue("@DateFin", dateFin);
 
-                    totalLignes = (int)await cmd.ExecuteScalarAsync();
+                    using var r = await cmd.ExecuteReaderAsync();
+                    if (await r.ReadAsync())
+                    {
+                        totalLignes = r.GetInt32(0);
+                        sousTotal = ReadDec(r, 1);
+                        totalTVA = ReadDec(r, 2);
+                        totalGeneral = ReadDec(r, 3);
+                    }
                 }
 
                 int totalPages = (int)Math.Ceiling((double)totalLignes / lignesParPage);
                 if (page < 1) page = 1;
                 if (page > totalPages && totalPages > 0) page = totalPages;
-
                 int skip = (page - 1) * lignesParPage;
 
-                // ÉTAPE 2: Récupérer les factures paginées
+                // ETAPE 2 : la page demandee
                 var lignes = new List<RapportVentesLigneDto>();
-                decimal sousTotal = 0;
-                decimal totalTVA = 0;
-                decimal totalGeneral = 0;
-
                 using (var cmd = new SqlCommand(@"
-            SELECT 
-                f.DateCreation,
-                f.NumeroFacture,
-                f.Designation,
-                f.Sous_total,
-                f.ValeurTVA,
-                f.Total_final,
-                u.Nom AS NomUtilisateur
-            FROM FACTURE f
-            LEFT JOIN UTILISATEURS u ON f.idUtilisateur = u.Id
-            WHERE f.IdEntreprise = @IdEntreprise
-            AND CAST(f.DateCreation AS DATE) >= @DateDebut
-            AND CAST(f.DateCreation AS DATE) <= @DateFin
-            AND f.Etat = 'Payé'
-            AND f.EstAnnuler = 0
-            AND f.EstSupprimer = 0
-            ORDER BY f.DateCreation DESC, f.NumeroFacture DESC
-            OFFSET @Skip ROWS
-            FETCH NEXT @Take ROWS ONLY", conn))
+                    SELECT f.DateCreation, f.NumeroFacture, f.Designation, f.Total_final, COALESCE(u.Nom, cw.Nom) AS NomUtilisateur
+                    FROM FACTURE f
+                    LEFT JOIN UTILISATEURS u ON f.idUtilisateur = u.Id      -- caissier local (synchronise)
+                    LEFT JOIN COMPTES_WEB cw ON f.idUtilisateur = cw.Id     -- compte web
+                    WHERE f.IdEntreprise = @IdEntreprise
+                      AND CAST(f.DateCreation AS DATE) >= @DateDebut
+                      AND CAST(f.DateCreation AS DATE) <= @DateFin
+                      AND f.EstAnnuler = 0
+                      AND f.EstSupprimer = 0
+                    ORDER BY f.DateCreation DESC, f.NumeroFacture DESC
+                    OFFSET @Skip ROWS
+                    FETCH NEXT @Take ROWS ONLY", conn))
                 {
                     cmd.Parameters.AddWithValue("@IdEntreprise", entrepriseId);
                     cmd.Parameters.AddWithValue("@DateDebut", dateDebut);
@@ -2049,19 +1953,14 @@ namespace Api_BuildTech.Controllers.POS
                     using var reader = await cmd.ExecuteReaderAsync();
                     while (await reader.ReadAsync())
                     {
-                        var montant = reader.GetDecimal(5);
                         lignes.Add(new RapportVentesLigneDto
                         {
                             Date = reader.GetDateTime(0),
                             NumeroFacture = ReadNullableString(reader, "NumeroFacture") ?? "-",
                             Designation = ReadNullableString(reader, "Designation") ?? "-",
-                            MontantTotal = montant,
+                            MontantTotal = ReadDec(reader, 3),
                             NomUtilisateur = ReadNullableString(reader, "NomUtilisateur")
                         });
-
-                        sousTotal += reader.GetDecimal(3);
-                        totalTVA += reader.GetDecimal(4);
-                        totalGeneral += montant;
                     }
                 }
 
@@ -2085,7 +1984,6 @@ namespace Api_BuildTech.Controllers.POS
                 return new RapportVentesDto { Lignes = new List<RapportVentesLigneDto>() };
             }
         }
-
         /// <summary>
         /// Générer Rapport Ventes Quantité+Valeur
         /// </summary>
@@ -2100,61 +1998,60 @@ namespace Api_BuildTech.Controllers.POS
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                // ÉTAPE 1: Compter total articles
+                // Meme jeu de lignes pour le total, les totaux et la page : lignes de factures PAYEES de la periode.
+                // (Avant : les conditions sur la facture etaient dans un LEFT JOIN, donc les quantites de TOUTES les
+                //  ventes de l'article etaient additionnees, sans tenir compte des dates ni du statut.)
+                const string source = @"
+                    FROM DETAIL_TRANSACTIONS dt
+                    JOIN FACTURE f ON dt.IdFacture = f.id
+                    JOIN ARTICLES a ON a.Id = dt.IdArticle
+                    WHERE f.IdEntreprise = @IdEntreprise
+                      AND CAST(f.DateCreation AS DATE) >= @DateDebut
+                      AND CAST(f.DateCreation AS DATE) <= @DateFin
+                      AND f.EstAnnuler = 0
+                      AND f.EstSupprimer = 0
+                      AND dt.estSupprimer = 0";
+
                 int totalLignes = 0;
-                using (var cmd = new SqlCommand(@"
-            SELECT COUNT(*) FROM (
-                SELECT DISTINCT dt.IdArticle
-                FROM DETAIL_TRANSACTIONS dt
-                JOIN FACTURE f ON dt.IdFacture = f.id
-                WHERE f.IdEntreprise = @IdEntreprise
-                AND CAST(f.DateCreation AS DATE) >= @DateDebut
-                AND CAST(f.DateCreation AS DATE) <= @DateFin
-                AND f.Etat = 'Payé'
-                AND f.EstAnnuler = 0
-                AND f.EstSupprimer = 0
-                AND dt.estSupprimer = 0
-            ) t", conn))
+                decimal quantiteTotalVendue = 0, montantTotalVendu = 0;
+                using (var cmd = new SqlCommand($@"
+                    SELECT COUNT(*), ISNULL(SUM(q), 0), ISNULL(SUM(m), 0)
+                    FROM (
+                        SELECT a.Id AS IdArticle,
+                               SUM(ISNULL(dt.Quantite, 0)) AS q,
+                               SUM(ISNULL(dt.PrixTotal, 0)) AS m
+                        {source}
+                        GROUP BY a.Id
+                    ) t", conn))
                 {
                     cmd.Parameters.AddWithValue("@IdEntreprise", entrepriseId);
                     cmd.Parameters.AddWithValue("@DateDebut", dateDebut);
                     cmd.Parameters.AddWithValue("@DateFin", dateFin);
 
-                    totalLignes = (int)await cmd.ExecuteScalarAsync();
+                    using var r = await cmd.ExecuteReaderAsync();
+                    if (await r.ReadAsync())
+                    {
+                        totalLignes = r.GetInt32(0);
+                        quantiteTotalVendue = ReadDec(r, 1);
+                        montantTotalVendu = ReadDec(r, 2);
+                    }
                 }
 
                 int totalPages = (int)Math.Ceiling((double)totalLignes / lignesParPage);
                 if (page < 1) page = 1;
                 if (page > totalPages && totalPages > 0) page = totalPages;
-
                 int skip = (page - 1) * lignesParPage;
 
-                // ÉTAPE 2: Récupérer les articles paginés avec VUE
                 var lignes = new List<RapportVentesQuantiteLigneDto>();
-                decimal quantiteTotalVendue = 0;
-                decimal montantTotalVendu = 0;
-
-                using (var cmd = new SqlCommand(@"
-            SELECT 
-                a.Designation,
-                ISNULL(SUM(dt.Quantite), 0) as QuantiteVendue,
-                ISNULL(SUM(dt.PrixTotal + dt.MontantTVA), 0) as MontantTTC
-            FROM ARTICLES a
-            LEFT JOIN DETAIL_TRANSACTIONS dt ON a.id = dt.IdArticle AND dt.estSupprimer = 0
-            LEFT JOIN FACTURE f ON dt.IdFacture = f.id 
-                AND f.Etat = 'Payé' 
-                AND f.EstAnnuler = 0 
-                AND f.EstSupprimer = 0
-                AND CAST(f.DateCreation AS DATE) >= @DateDebut
-                AND CAST(f.DateCreation AS DATE) <= @DateFin
-            WHERE a.IdEntreprise = @IdEntreprise
-            AND a.Statut = 1
-            AND (dt.IdArticle IS NOT NULL OR 1=1)
-            GROUP BY a.id, a.Designation
-            HAVING ISNULL(SUM(dt.Quantite), 0) > 0
-            ORDER BY a.Designation ASC
-            OFFSET @Skip ROWS
-            FETCH NEXT @Take ROWS ONLY", conn))
+                using (var cmd = new SqlCommand($@"
+                    SELECT a.Designation,
+                           SUM(ISNULL(dt.Quantite, 0)) AS QuantiteVendue,
+                           SUM(ISNULL(dt.PrixTotal, 0)) AS MontantTTC
+                    {source}
+                    GROUP BY a.Id, a.Designation
+                    ORDER BY a.Designation ASC
+                    OFFSET @Skip ROWS
+                    FETCH NEXT @Take ROWS ONLY", conn))
                 {
                     cmd.Parameters.AddWithValue("@IdEntreprise", entrepriseId);
                     cmd.Parameters.AddWithValue("@DateDebut", dateDebut);
@@ -2165,18 +2062,12 @@ namespace Api_BuildTech.Controllers.POS
                     using var reader = await cmd.ExecuteReaderAsync();
                     while (await reader.ReadAsync())
                     {
-                        decimal quantite = reader.GetDecimal(1);
-                        decimal montant = reader.GetDecimal(2);
-
                         lignes.Add(new RapportVentesQuantiteLigneDto
                         {
-                            Designation = reader.GetString(0),
-                            Quantite = quantite,
-                            MontantTotal = montant
+                            Designation = ReadNullableString(reader, "Designation") ?? "-",
+                            Quantite = ReadDec(reader, 1),
+                            MontantTotal = ReadDec(reader, 2)
                         });
-
-                        quantiteTotalVendue += quantite;
-                        montantTotalVendu += montant;
                     }
                 }
 
@@ -2214,36 +2105,36 @@ namespace Api_BuildTech.Controllers.POS
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                // ÉTAPE 1: Compter total articles
+                // Total de lignes + stock total de TOUS les articles (et non de la seule page affichee)
                 int totalLignes = 0;
+                decimal stockTotalArticles = 0;
                 using (var cmd = new SqlCommand(@"
-            SELECT COUNT(*) FROM [BuildTechPlatforme].[dbo].[V_STOCK_ARTICLES_ENTREPRISE]
-            WHERE IdEntreprise = @IdEntreprise", conn))
+                    SELECT COUNT(*), ISNULL(SUM(CAST(StockActuel AS DECIMAL(18, 2))), 0)
+                    FROM V_STOCK_ARTICLES_ENTREPRISE
+                    WHERE IdEntreprise = @IdEntreprise", conn))
                 {
                     cmd.Parameters.AddWithValue("@IdEntreprise", entrepriseId);
-                    totalLignes = (int)await cmd.ExecuteScalarAsync();
+                    using var r = await cmd.ExecuteReaderAsync();
+                    if (await r.ReadAsync())
+                    {
+                        totalLignes = r.GetInt32(0);
+                        stockTotalArticles = ReadDec(r, 1);
+                    }
                 }
 
                 int totalPages = (int)Math.Ceiling((double)totalLignes / lignesParPage);
                 if (page < 1) page = 1;
                 if (page > totalPages && totalPages > 0) page = totalPages;
-
                 int skip = (page - 1) * lignesParPage;
 
-                // ÉTAPE 2: Récupérer les articles paginés
                 var lignes = new List<RapportStockLigneDto>();
-                decimal stockTotalArticles = 0;
-
                 using (var cmd = new SqlCommand(@"
-            SELECT 
-                Designation,
-                CodeArticle,
-                StockActuel
-            FROM [BuildTechPlatforme].[dbo].[V_STOCK_ARTICLES_ENTREPRISE]
-            WHERE IdEntreprise = @IdEntreprise
-            ORDER BY Designation ASC
-            OFFSET @Skip ROWS
-            FETCH NEXT @Take ROWS ONLY", conn))
+                    SELECT Designation, CodeArticle, CAST(ISNULL(StockActuel, 0) AS DECIMAL(18, 2)) AS StockActuel
+                    FROM V_STOCK_ARTICLES_ENTREPRISE
+                    WHERE IdEntreprise = @IdEntreprise
+                    ORDER BY Designation ASC
+                    OFFSET @Skip ROWS
+                    FETCH NEXT @Take ROWS ONLY", conn))
                 {
                     cmd.Parameters.AddWithValue("@IdEntreprise", entrepriseId);
                     cmd.Parameters.AddWithValue("@Skip", skip);
@@ -2252,15 +2143,12 @@ namespace Api_BuildTech.Controllers.POS
                     using var reader = await cmd.ExecuteReaderAsync();
                     while (await reader.ReadAsync())
                     {
-                        decimal stock = reader.GetDecimal(2);
                         lignes.Add(new RapportStockLigneDto
                         {
-                            Designation = reader.GetString(0),
+                            Designation = ReadNullableString(reader, "Designation") ?? "-",
                             CodeArticle = ReadNullableString(reader, "CodeArticle") ?? "-",
-                            StockActuel = stock
+                            StockActuel = ReadDec(reader, 2)
                         });
-
-                        stockTotalArticles += stock;
                     }
                 }
 

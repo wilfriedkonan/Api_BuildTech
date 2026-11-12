@@ -158,13 +158,13 @@ namespace Api_BuildTech.Controllers.ArticleStock
                     using var reader = await cmd.ExecuteReaderAsync();
                     if (await reader.ReadAsync())
                     {
-                        stats.TotalArticles = reader.GetInt32(0);
-                        stats.TotalEnStock = reader.GetInt32(1);
-                        stats.TotalEnAlerte = reader.GetInt32(2);
-                        stats.TotalEnRupture = reader.GetInt32(3);
-                        stats.TotalStockables = reader.GetInt32(4);
-                        stats.TotalPos = reader.GetInt32(5);
-                        stats.TotalPromo = reader.GetInt32(6);
+                        stats.TotalArticles = reader.IsDBNull(0) ? 0 : reader.GetInt32(0);
+                        stats.TotalEnStock = reader.IsDBNull(1) ? 0 : reader.GetInt32(1);
+                        stats.TotalEnAlerte = reader.IsDBNull(2) ? 0 : reader.GetInt32(2);
+                        stats.TotalEnRupture = reader.IsDBNull(3) ? 0 : reader.GetInt32(3);
+                        stats.TotalStockables = reader.IsDBNull(4) ? 0 : reader.GetInt32(4);
+                        stats.TotalPos = reader.IsDBNull(5) ? 0 : reader.GetInt32(5);
+                        stats.TotalPromo = reader.IsDBNull(6) ? 0 : reader.GetInt32(6);
                         stats.StockTotalUnites = reader.IsDBNull(7) ? 0 : reader.GetDecimal(7);
                         stats.ValeurStockTotal = reader.IsDBNull(8) ? 0 : reader.GetDecimal(8);
 
@@ -404,52 +404,129 @@ namespace Api_BuildTech.Controllers.ArticleStock
             return result;
         }
 
+        /// <summary>decimal sans exception : NULL ou illisible -> 0.</summary>
+        private static decimal ReadDecimal(SqlDataReader reader, string colonne)
+        {
+            int i;
+            try { i = reader.GetOrdinal(colonne); } catch (IndexOutOfRangeException) { return 0m; }
+            if (reader.IsDBNull(i)) return 0m;
+            try { return Convert.ToDecimal(reader.GetValue(i), System.Globalization.CultureInfo.InvariantCulture); }
+            catch (Exception) { return 0m; }
+        }
+
+        /// <summary>Guid sans exception : NULL ou illisible -> Guid.Empty.</summary>
+        private static Guid ReadGuid(SqlDataReader reader, string colonne)
+        {
+            int i;
+            try { i = reader.GetOrdinal(colonne); } catch (IndexOutOfRangeException) { return Guid.Empty; }
+            if (reader.IsDBNull(i)) return Guid.Empty;
+            var v = reader.GetValue(i);
+            if (v is Guid g) return g;
+            return Guid.TryParse(Convert.ToString(v), out var r) ? r : Guid.Empty;
+        }
+
+        /// <summary>
+        /// Lit une colonne en bool? sans jamais lever d'exception de conversion :
+        /// NULL -> null ; bit -> tel quel ; nombre -> (valeur != 0) ; texte "1/true/oui/vrai/visible/actif" -> true,
+        /// "0/false/non/faux/masque/inactif" -> false ; tout autre texte -> null.
+        /// </summary>
+        private static bool? ReadBool(SqlDataReader reader, string colonne)
+        {
+            int i;
+            try { i = reader.GetOrdinal(colonne); } catch (IndexOutOfRangeException) { return null; }
+            if (reader.IsDBNull(i)) return null;
+
+            var v = reader.GetValue(i);
+            switch (v)
+            {
+                case bool b: return b;
+                case byte or sbyte or short or ushort or int or uint or long or ulong:
+                    return Convert.ToInt64(v) != 0;
+                case decimal d: return d != 0m;
+                case double db: return db != 0d;
+                case float f: return f != 0f;
+                case string t:
+                    switch (t.Trim().ToLowerInvariant())
+                    {
+                        case "1":
+                        case "true":
+                        case "oui":
+                        case "vrai":
+                        case "yes":
+                        case "visible":
+                        case "actif":
+                            return true;
+                        case "0":
+                        case "false":
+                        case "non":
+                        case "faux":
+                        case "no":
+                        case "masque":
+                        case "inactif":
+                            return false;
+                        default: return null;
+                    }
+                default: return null;
+            }
+        }
+
+        /// <summary>
+        /// Lit n'importe quelle colonne en texte (int, decimal, bit, varchar...), null si NULL.
+        /// Evite l'InvalidCastException quand la vue renvoie un nombre la ou le DTO attend un string (ex. position).
+        /// </summary>
+        private static string? ReadTexte(SqlDataReader reader, string colonne)
+        {
+            var i = reader.GetOrdinal(colonne);
+            if (reader.IsDBNull(i)) return null;
+            return Convert.ToString(reader.GetValue(i), System.Globalization.CultureInfo.InvariantCulture);
+        }
+
         private StockArticleViewDto MapStockFromReader(SqlDataReader reader)
         {
             return new StockArticleViewDto
             {
-                IdEntreprise = reader.GetGuid(reader.GetOrdinal("IdEntreprise")),
-                IdArticle = reader.GetGuid(reader.GetOrdinal("IdArticle")),
-                CodeArticle = ReadNullableString(reader, "CodeArticle"),
-                Designation = ReadNullableString(reader, "Designation"),
-                Description = ReadNullableString(reader, "Description"),
-                CodeBarre = ReadNullableString(reader, "CodeBarre"),
+                IdEntreprise = ReadGuid(reader, "IdEntreprise"),
+                IdArticle = ReadGuid(reader, "IdArticle"),
+                CodeArticle = ReadTexte(reader, "CodeArticle"),
+                Designation = ReadTexte(reader, "Designation"),
+                Description = ReadTexte(reader, "Description"),
+                CodeBarre = ReadTexte(reader, "CodeBarre"),
                 PrixAchat = ReadNullableDecimal(reader, "PrixAchat"),
                 PrixVente = ReadNullableDecimal(reader, "PrixVente"),
                 PrixExterieur = ReadNullableDecimal(reader, "PrixExterieur"),
-                EstPos = ReadNullableBool(reader, "EstPos"),
-                position = ReadNullableString(reader, "position"),
-                EstExonerer = ReadNullableBool(reader, "EstExonerer"),
-                TypeRepas = ReadNullableString(reader, "TypeRepas"),
-                Etat = ReadNullableString(reader, "Etat"),
+                EstPos = ReadBool(reader, "EstPos"),
+                position = ReadTexte(reader, "position"),
+                EstExonerer = ReadBool(reader, "EstExonerer"),
+                TypeRepas = ReadTexte(reader, "TypeRepas"),
+                Etat = ReadTexte(reader, "Etat"),
                 DatePerenption = ReadNullableDateTime(reader, "DatePerenption"),
-                EstStockable = ReadNullableBool(reader, "EstStockable"),
-                EstEnStock = ReadNullableBool(reader, "EstEnStock"),
-                EstEnPorter = ReadNullableBool(reader, "EstEnPorter"),
+                EstStockable = ReadBool(reader, "EstStockable"),
+                EstEnStock = ReadBool(reader, "EstEnStock"),
+                EstEnPorter = ReadBool(reader, "EstEnPorter"),
                 IdCathegorie = ReadNullableGuid(reader, "IdCathegorie"),
                 IdType_Repas = ReadNullableGuid(reader, "IdType_Repas"),
                 PrixPromo = ReadNullableDecimal(reader, "PrixPromo"),
-                EstPromo = ReadNullableBool(reader, "EstPromo"),
-                EstComposer = ReadNullableBool(reader, "EstComposer"),
-                EstVendableSansComposition = ReadNullableBool(reader, "EstVendableSansComposition"),
-                AfficherStockPOS = ReadNullableBool(reader, "AfficherStockPOS"),
-                ImageURL = ReadNullableString(reader, "ImageURL"),
+                EstPromo = ReadBool(reader, "EstPromo"),
+                EstComposer = ReadBool(reader, "EstComposer"),
+                EstVendableSansComposition = ReadBool(reader, "EstVendableSansComposition"),
+                AfficherStockPOS = ReadTexte(reader, "AfficherStockPOS"),
+                ImageURL = ReadTexte(reader, "ImageURL"),
                 TauxTva = ReadNullableDecimal(reader, "TauxTva"),
-                Stock = reader.GetDecimal(reader.GetOrdinal("Stock")),
-                SeuilAlerte = reader.GetDecimal(reader.GetOrdinal("SeuilAlerte")),
-                Statut = ReadNullableBool(reader, "Statut"),
+                Stock = ReadDecimal(reader, "Stock"),
+                SeuilAlerte = ReadDecimal(reader, "SeuilAlerte"),
+                Statut = ReadBool(reader, "Statut"),
                 DateCreate = ReadNullableDateTime(reader, "DateCreate"),
                 idCreateUser = ReadNullableGuid(reader, "idCreateUser"),
                 DateLastUpdate = ReadNullableDateTime(reader, "DateLastUpdate"),
                 idLastUpdateUser = ReadNullableGuid(reader, "idLastUpdateUser"),
-                DesignationCategorie = ReadNullableString(reader, "DesignationCategorie"),
-                NomCreateur = ReadNullableString(reader, "NomCreateur"),
-                PrenomCreateur = ReadNullableString(reader, "PrenomCreateur"),
-                NomModificateur = ReadNullableString(reader, "NomModificateur"),
-                PrenomModificateur = ReadNullableString(reader, "PrenomModificateur"),
-                StockActuel = reader.GetDecimal(reader.GetOrdinal("StockActuel")),
-                SeuilStock = reader.GetDecimal(reader.GetOrdinal("SeuilStock")),
-                StatutStock = ReadNullableString(reader, "StatutStock")
+                DesignationCategorie = ReadTexte(reader, "DesignationCategorie"),
+                NomCreateur = ReadTexte(reader, "NomCreateur"),
+                PrenomCreateur = ReadTexte(reader, "PrenomCreateur"),
+                NomModificateur = ReadTexte(reader, "NomModificateur"),
+                PrenomModificateur = ReadTexte(reader, "PrenomModificateur"),
+                StockActuel = ReadDecimal(reader, "StockActuel"),
+                SeuilStock = ReadDecimal(reader, "SeuilStock"),
+                StatutStock = ReadTexte(reader, "StatutStock")
             };
         }
 

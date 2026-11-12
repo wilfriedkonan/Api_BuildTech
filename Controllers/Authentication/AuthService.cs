@@ -1,23 +1,33 @@
-﻿using Api_BuildTech.Services;
+using Api_BuildTech.Services;
 using Microsoft.Data.SqlClient;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
 
 namespace Api_BuildTech.Controllers.Authentication
 {
+    /// <summary>
+    /// Authentification des COMPTES WEB (table COMPTES_WEB, comptes d'organisation, mots de passe BCrypt).
+    /// La table UTILISATEURS (comptes de caisse) n'est PLUS utilisée ici : elle ne sert qu'à la synchronisation.
+    /// Les jetons (JWT + refresh) sont fabriqués par TokenService ; ce service ne fait que vérifier l'identité.
+    /// </summary>
     public class AuthService : DatabaseService
     {
+        private const int MaxEchecs = 5;           // échecs consécutifs avant verrouillage
+        private const int VerrouMinutes = 15;      // durée du verrouillage
+
+        // Hash factice : on vérifie toujours un mot de passe, même quand l'email n'existe pas,
+        // pour que le temps de réponse ne révèle pas l'existence d'un compte.
+        private static readonly Lazy<string> DummyHash =
+            new(() => BCrypt.Net.BCrypt.HashPassword("compte-inexistant-" + Guid.NewGuid(), 12));
+
+        private const string MessageIdentifiantsInvalides = "Email ou mot de passe incorrect";
+
         private readonly IConfiguration _configuration;
 
         public AuthService(
             string connectionString,
             ILogger<AuthService> logger,
-            IHttpContextAccessor httpContextAccessor, // ✅ AJOUTÉ
+            IHttpContextAccessor httpContextAccessor,
             IConfiguration configuration)
-            : base(connectionString, logger, httpContextAccessor) // ✅ AJOUTÉ
+            : base(connectionString, logger, httpContextAccessor)
         {
             _configuration = configuration;
         }
@@ -26,198 +36,170 @@ namespace Api_BuildTech.Controllers.Authentication
         {
             try
             {
-                // 1. Récupérer l'utilisateur
-                var user = await GetUserByEmailAsync(request.Email);
+                var email = (request.Email ?? string.Empty).Trim().ToLowerInvariant();
 
-                if (user == null || !VerifyPassword(request.Password, user.MotDePasse))
+                // 1. Compte web
+                var compte = await GetCompteByEmailAsync(email);
+
+                if (compte == null)
                 {
-                    return new LoginResponse
-                    {
-                        Success = false,
-                        Message = "Email ou mot de passe incorrect"
-                    };
+                    VerifyPassword(request.Password, DummyHash.Value); // égalise le temps de réponse
+                    return Echec(MessageIdentifiantsInvalides);
                 }
 
-                // 2. Vérifier que l'utilisateur est actif
-                if (!user.IsActive)
+                // 2. Verrouillage temporaire (trop d'échecs)
+                if (compte.VerrouJusqua.HasValue && compte.VerrouJusqua.Value > DateTime.UtcNow)
                 {
-                    return new LoginResponse
-                    {
-                        Success = false,
-                        Message = "Compte désactivé"
-                    };
+                    _logger.LogWarning("Login refusé (compte verrouillé): {Email}", email);
+                    return Echec("Compte temporairement verrouillé après plusieurs échecs. Réessayez dans quelques minutes.");
                 }
 
-                // 3. Vérifier que l'entreprise est active
-                if (!await ValidateEntrepriseAsync(user.IdEntreprise))
+                // 3. Mot de passe
+                if (!VerifyPassword(request.Password, compte.MotPasseHash))
                 {
-                    return new LoginResponse
-                    {
-                        Success = false,
-                        Message = "Entreprise inactive ou souscription expirée"
-                    };
+                    await EnregistrerEchecAsync(compte.Id);
+                    return Echec(MessageIdentifiantsInvalides);
                 }
 
-                // 4. Récupérer les infos complémentaires
-                var role = await GetRoleAsync(user.IdRole);
-                var entrepriseName = await GetEntrepriseNameAsync(user.IdEntreprise);
-                
-                // 5. Générer les tokens
-                var accessToken = GenerateAccessToken(user, role?.Name);
-                var refreshToken = GenerateRefreshToken();
+                // 4. Compte actif (vérifié APRÈS le mot de passe : pas de fuite d'information)
+                if (!compte.EstActif)
+                {
+                    return Echec("Compte désactivé");
+                }
 
-                // 6. Mettre à jour la dernière connexion
-                await UpdateLastLoginAsync(user.Id);
+                // 5. Entreprises accessibles de l'organisation (actives + abonnement valide)
+                //    Le compte doit appartenir à une organisation qui a AU MOINS UNE entreprise active (et en règle).
+                //    Un super-admin (opérateur de la plateforme) est dispensé de cette condition.
+                List<EntrepriseSummary> entreprises;
+                int actives;
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    entreprises = await EntrepriseAccess.ListValidesAsync(conn, compte.IdOrganisation);
+                    actives = entreprises.Count > 0
+                        ? entreprises.Count
+                        : await EntrepriseAccess.CompterActivesAsync(conn, compte.IdOrganisation);
+                }
 
-                // 7. Construire la réponse
+                if (entreprises.Count == 0 && !compte.IsSuperAdmin)
+                {
+                    _logger.LogInformation("Login refusé (aucune entreprise active et en règle): {Email}", email);
+                    return Echec(actives == 0
+                        ? "Aucune entreprise active : votre compte sera activé après validation de votre paiement."
+                        : "Souscription expirée : renouvelez l'abonnement pour vous connecter.");
+                }
+
+                // 6. Entreprise active : l'entreprise PAR DÉFAUT de l'organisation (IsDefault) si elle est valide,
+                //    sinon la première valide ; le front peut en changer (switch-entreprise)
+                var active = entreprises.FirstOrDefault();
+
+                await EnregistrerSuccesAsync(compte.Id);
+
                 return new LoginResponse
                 {
                     Success = true,
                     Message = "Authentification réussie",
-                    AccessToken = accessToken,
-                    RefreshToken = refreshToken,
-                    ExpiresAt = DateTime.UtcNow.AddHours(24),
                     User = new UserInfo
                     {
-                        Id = user.Id,
-                        Email = user.Email,
-                        Nom = user.Nom,
-                        Prenom = user.Prenom,
-                        IdEntreprise = user.IdEntreprise,
-                        NomEntreprise = entrepriseName,
-                        IsSuperAdmin = user.IsSuperAdmin,
-                        Role = role?.Name,
-                        IsActive = user.IsActive
+                        Id = compte.Id,
+                        Email = compte.Email,
+                        Nom = compte.Nom,
+                        Prenom = compte.Prenom,
+                        OrganisationId = compte.IdOrganisation,
+                        IdEntreprise = active?.Id ?? Guid.Empty,
+                        NomEntreprise = active?.Designation,
+                        IsSuperAdmin = compte.IsSuperAdmin,
+                        Role = compte.Role,
+                        RoleCaisse = compte.RoleCaisse,
+                        IsActive = compte.EstActif,
+                        Entreprises = entreprises
                     }
                 };
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Erreur login: {request.Email}");
-                return new LoginResponse
-                {
-                    Success = false,
-                    Message = "Erreur serveur lors de l'authentification"
-                };
+                _logger.LogError(ex, "Erreur login: {Email}", request.Email);
+                return Echec("Erreur serveur lors de l'authentification");
             }
         }
 
-        private async Task<User?> GetUserByEmailAsync(string email)
+        /// <summary>Entreprises accessibles de l'organisation (sélecteur du front, contrôle du changement d'entreprise).</summary>
+        public async Task<List<EntrepriseSummary>> ListEntreprisesAsync(Guid idOrganisation)
         {
-            try
-            {
-                using var conn = new SqlConnection(_connectionString);
-                await conn.OpenAsync();
-
-                using var cmd = new SqlCommand(@"
-                    SELECT Id, Email, Telephone, Nom, Prenom, MotDePasse, IdEntreprise,
-                           IdRole, IdPermission, IsSuperAdmin, IsActive,
-                           LastLoginAt, CreatedAt, UpdatedAt
-                    FROM UTILISATEURS
-                    WHERE Email = @Email", conn);
-
-                cmd.Parameters.AddWithValue("@Email", email);
-
-                using var reader = await cmd.ExecuteReaderAsync();
-
-                if (await reader.ReadAsync())
-                {
-                    return new User
-                    {
-                        Id = reader.GetGuid(reader.GetOrdinal("Id")),
-                        Email = reader.GetString(reader.GetOrdinal("Email")), // ✅ CORRIGÉ
-                        Telephone = ReadNullableString(reader, "Telephone") ?? "", // ✅ CORRIGÉ - gère NULL
-                        Nom = ReadNullableString(reader, "Nom"), // ✅ CORRIGÉ
-                        Prenom = ReadNullableString(reader, "Prenom"), // ✅ CORRIGÉ
-                        MotDePasse = ReadNullableString(reader, "MotDePasse") ?? "", // ✅ CORRIGÉ
-                        IdEntreprise = reader.GetGuid(reader.GetOrdinal("IdEntreprise")),
-                        IdRole = ReadNullableGuid(reader, "IdRole"), // ✅ CORRIGÉ - gère NULL
-                        IdPermission = ReadNullableGuid(reader, "IdPermission"), // ✅ CORRIGÉ
-                        IsSuperAdmin = reader.GetBoolean(reader.GetOrdinal("IsSuperAdmin")),
-                        IsActive = reader.GetBoolean(reader.GetOrdinal("IsActive")),
-                        LastLoginAt = ReadNullableDateTime(reader, "LastLoginAt"), // ✅ CORRIGÉ
-                        CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
-                        UpdatedAt = ReadNullableDateTime(reader, "UpdatedAt") // ✅ CORRIGÉ
-                    };
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Erreur récupération user: {email}");
-            }
-
-            return null;
+            using var conn = new SqlConnection(_connectionString);
+            await conn.OpenAsync();
+            return await EntrepriseAccess.ListValidesAsync(conn, idOrganisation);
         }
 
-        private async Task<bool> ValidateEntrepriseAsync(Guid idEntreprise)
+        // ====================================================================
+        // PRIVÉ
+        // ====================================================================
+
+        private static LoginResponse Echec(string message) => new() { Success = false, Message = message };
+
+        private sealed class CompteWeb
         {
+            public Guid Id { get; init; }
+            public Guid IdOrganisation { get; init; }
+            public string Email { get; init; } = string.Empty;
+            public string MotPasseHash { get; init; } = string.Empty;
+            public string? Nom { get; init; }
+            public string? Prenom { get; init; }
+            public string? Role { get; init; }
+            public string? RoleCaisse { get; init; }
+            public bool EstActif { get; init; }
+            public bool IsSuperAdmin { get; init; }
+            public DateTime? VerrouJusqua { get; init; }
+        }
+
+        private async Task<CompteWeb?> GetCompteByEmailAsync(string email)
+        {
+            using var conn = new SqlConnection(_connectionString);
+            await conn.OpenAsync();
+
+            using var cmd = new SqlCommand(@"
+                SELECT c.Id, c.IdOrganisation, c.Email, c.MotPasseHash, c.Nom, c.Prenom, c.[Role],
+                       c.EstActif, c.IsSuperAdmin, c.VerrouJusqua, r.Name
+                FROM COMPTES_WEB c
+                LEFT JOIN ROLES r ON r.Id = c.IdRole
+                WHERE c.Email = @Email", conn);
+            cmd.Parameters.AddWithValue("@Email", email);
+
+            using var reader = await cmd.ExecuteReaderAsync();
+            if (!await reader.ReadAsync()) return null;
+
+            return new CompteWeb
+            {
+                Id = reader.GetGuid(0),
+                IdOrganisation = reader.GetGuid(1),
+                Email = reader.GetString(2),
+                MotPasseHash = reader.IsDBNull(3) ? string.Empty : reader.GetString(3),
+                Nom = reader.IsDBNull(4) ? null : reader.GetString(4),
+                Prenom = reader.IsDBNull(5) ? null : reader.GetString(5),
+                Role = reader.IsDBNull(6) ? null : reader.GetString(6),
+                EstActif = reader.GetBoolean(7),
+                IsSuperAdmin = reader.GetBoolean(8),
+                VerrouJusqua = reader.IsDBNull(9) ? (DateTime?)null : reader.GetDateTime(9),
+                RoleCaisse = reader.IsDBNull(10) ? null : reader.GetString(10)
+            };
+        }
+
+        /// <summary>Compare à un hash BCrypt ($2a$/$2b$, y compris les comptes migrés). Un hash invalide = faux.</summary>
+        private static bool VerifyPassword(string? password, string hash)
+        {
+            if (string.IsNullOrEmpty(password) || string.IsNullOrEmpty(hash)) return false;
             try
             {
-                using var conn = new SqlConnection(_connectionString);
-                await conn.OpenAsync();
-
-                // Vérifier que l'entreprise est active ET que l'abonnement est valide
-                using var cmd = new SqlCommand(@"
-                    SELECT COUNT(*)
-                    FROM ENTREPRISE e
-                    LEFT JOIN SUBSCRIPTIONS s ON e.Id = s.IdEntreprise 
-                        AND s.Status = 'Active' 
-                        AND s.EndDate > GETUTCDATE()
-                    WHERE e.Id = @IdEntreprise 
-                      AND e.IsActive = 1
-                      AND (s.Id IS NOT NULL OR e.Autorisation = 1)", conn);
-
-                cmd.Parameters.AddWithValue("@IdEntreprise", idEntreprise);
-
-                var count = (int?)await cmd.ExecuteScalarAsync();
-                return count > 0;
+                return BCrypt.Net.BCrypt.Verify(password, hash);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                _logger.LogError(ex, $"Erreur validation entreprise: {idEntreprise}");
                 return false;
             }
         }
 
-        private async Task<Role?> GetRoleAsync(Guid? idRole)
-        {
-            if (!idRole.HasValue)
-                return null;
-
-            try
-            {
-                using var conn = new SqlConnection(_connectionString);
-                await conn.OpenAsync();
-
-                using var cmd = new SqlCommand(@"
-                    SELECT Id, Name, Description, CreatedAt
-                    FROM ROLES
-                    WHERE Id = @Id", conn);
-
-                cmd.Parameters.AddWithValue("@Id", idRole.Value);
-
-                using var reader = await cmd.ExecuteReaderAsync();
-
-                if (await reader.ReadAsync())
-                {
-                    return new Role
-                    {
-                        Id = reader.GetGuid(0),
-                        Name = reader.GetString(1),
-                        Description = ReadNullableString(reader, "Description"),
-                        CreatedAt = reader.GetDateTime(3)
-                    };
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Erreur récupération role: {idRole}");
-            }
-
-            return null;
-        }
-
-        private async Task<string?> GetEntrepriseNameAsync(Guid idEntreprise)
+        /// <summary>Incrémente le compteur d'échecs (atomique) et verrouille le compte au-delà du seuil.</summary>
+        private async Task EnregistrerEchecAsync(Guid idCompte)
         {
             try
             {
@@ -225,105 +207,46 @@ namespace Api_BuildTech.Controllers.Authentication
                 await conn.OpenAsync();
 
                 using var cmd = new SqlCommand(@"
-                    SELECT Designation 
-                    FROM ENTREPRISE 
+                    UPDATE COMPTES_WEB
+                    SET VerrouJusqua = CASE WHEN ISNULL(EchecsConsecutifs, 0) + 1 >= @Max
+                                            THEN DATEADD(MINUTE, @Minutes, GETUTCDATE())
+                                            ELSE VerrouJusqua END,
+                        EchecsConsecutifs = CASE WHEN ISNULL(EchecsConsecutifs, 0) + 1 >= @Max
+                                                 THEN 0
+                                                 ELSE ISNULL(EchecsConsecutifs, 0) + 1 END,
+                        UpdatedDate = GETUTCDATE()
                     WHERE Id = @Id", conn);
-
-                cmd.Parameters.AddWithValue("@Id", idEntreprise);
-
-                return (string?)await cmd.ExecuteScalarAsync();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Erreur récupération nom entreprise: {idEntreprise}");
-                return null;
-            }
-        }
-
-        private string GenerateAccessToken(User user, string? roleName)
-        {
-            var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim(ClaimTypes.Email, user.Email),
-                new Claim("entreprise_id", user.IdEntreprise.ToString()),
-                new Claim("is_super_admin", user.IsSuperAdmin.ToString()),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-            };
-
-            // Ajouter le nom complet si disponible
-            if (!string.IsNullOrEmpty(user.Prenom) || !string.IsNullOrEmpty(user.Nom))
-            {
-                var fullName = $"{user.Prenom} {user.Nom}".Trim();
-                if (!string.IsNullOrEmpty(fullName))
-                    claims.Add(new Claim(ClaimTypes.Name, fullName));
-            }
-
-            // Ajouter le rôle
-            if (!string.IsNullOrEmpty(roleName))
-            {
-                claims.Add(new Claim(ClaimTypes.Role, roleName));
-            }
-
-            // SuperAdmin a tous les rôles
-            if (user.IsSuperAdmin)
-            {
-                claims.Add(new Claim(ClaimTypes.Role, "SuperAdmin"));
-            }
-
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
-                _configuration["Jwt:SecretKey"] ?? throw new InvalidOperationException("JWT SecretKey manquante")));
-
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-            var token = new JwtSecurityToken(
-                issuer: _configuration["Jwt:Issuer"],
-                audience: _configuration["Jwt:Audience"],
-                claims: claims,
-                expires: DateTime.UtcNow.AddHours(24),
-                signingCredentials: creds
-            );
-
-            return new JwtSecurityTokenHandler().WriteToken(token);
-        }
-
-        private string GenerateRefreshToken()
-        {
-            var randomNumber = new byte[32];
-            using var rng = RandomNumberGenerator.Create();
-            rng.GetBytes(randomNumber);
-            return Convert.ToBase64String(randomNumber);
-        }
-
-        private bool VerifyPassword(string password, string hash)
-        {
-            // TODO: Implémenter BCrypt.Net
-            // return BCrypt.Net.BCrypt.Verify(password, hash);
-
-            // TEMPORAIRE - UNIQUEMENT POUR DÉVELOPPEMENT
-            return password == hash;
-        }
-
-        private async Task UpdateLastLoginAsync(Guid userId)
-        {
-            try
-            {
-                using var conn = new SqlConnection(_connectionString);
-                await conn.OpenAsync();
-
-                using var cmd = new SqlCommand(@"
-                    UPDATE UTILISATEURS
-                    SET LastLoginAt = GETUTCDATE(),
-                        UpdatedAt = GETUTCDATE()
-                    WHERE Id = @Id", conn);
-
-                cmd.Parameters.AddWithValue("@Id", userId);
-
+                cmd.Parameters.AddWithValue("@Max", MaxEchecs);
+                cmd.Parameters.AddWithValue("@Minutes", VerrouMinutes);
+                cmd.Parameters.AddWithValue("@Id", idCompte);
                 await cmd.ExecuteNonQueryAsync();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Erreur mise à jour LastLogin: {userId}");
+                _logger.LogError(ex, "Erreur enregistrement échec de connexion: {Id}", idCompte);
+            }
+        }
+
+        private async Task EnregistrerSuccesAsync(Guid idCompte)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                using var cmd = new SqlCommand(@"
+                    UPDATE COMPTES_WEB
+                    SET EchecsConsecutifs = 0,
+                        VerrouJusqua = NULL,
+                        DerniereConnexion = GETUTCDATE(),
+                        UpdatedDate = GETUTCDATE()
+                    WHERE Id = @Id", conn);
+                cmd.Parameters.AddWithValue("@Id", idCompte);
+                await cmd.ExecuteNonQueryAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erreur mise à jour dernière connexion: {Id}", idCompte);
             }
         }
     }
